@@ -1,20 +1,26 @@
 import json
+import logging
+import numpy as np
+import os
+import pandas as pd
 from urllib import request
 
 import editdistance as editdistance
 import re
 
-from Database.DatabaseHandler import DatabaseHandler
-from NLP.TextPreprocessor import TextPreprocessor
+def remove_urls(loc_name):
+    #BUG: actually remove urls
+    return loc_name
 
 
 class LocationFinder:
-    key = '*******'
+    key = os.getenv('MAPS_API_KEY')
     pre = 'https://maps.googleapis.com/maps/api/geocode/json?address='
     post = '&key='+key
 
     @staticmethod
-    def find_physical_location(location_name):
+    def find_country(location_name):
+        logging.debug(f'{location_name = }')
         location_name = location_name.lower()
         location_name = location_name.replace('land of the free','')
         location_name = location_name.replace('the','')
@@ -25,18 +31,19 @@ class LocationFinder:
         location_name = location_name.replace('united kingdom', 'uk')
         location_name = location_name.replace('republic of texas', 'texas')
         location_name = location_name.replace('european union', '')
-        location_name = TextPreprocessor.remove_urls(location_name)
-        url_location = location_name.replace(' ','+')
+        location_name = remove_urls(location_name)
+        url_location = '+'.join(re.compile('[\w/]+').findall(location_name)) # removes emojis
+        logging.debug(f'{url_location = }')
 
         location = dict()
         location['address'] = None
         location['country'] = None
         if url_location.replace(' ', '') != '':
-            print(url_location)
+            logging.debug(url_location)
             reply = request.urlopen(LocationFinder.pre+url_location+LocationFinder.post).read().decode("utf-8")
 
             json_reply = json.loads(reply)
-            print(json_reply)
+            logging.debug(f'{json_reply = }')
             if json_reply['status'] == 'OK':
                 best_res = None
                 min_edit_distance = 1000
@@ -57,38 +64,36 @@ class LocationFinder:
                     if 'locality' in best_res['types']:
                         location['address'] = best_res['formatted_address']
                     location['country'] = country
-                    print("Location found for '" + location_name + "': " + str(location['address']) + ", " + str(location['country']))
+                    logging.info("Location found for '" + location_name + "': " + str(location['address']) + ", " + str(location['country']))
+                    return country
                 else:
-                    print("No location found for '" + location_name + "'")
-        return location
+                    logging.info("No location found for '" + location_name + "'")
+        return np.nan
+
 
     @staticmethod
-    def get_accounts_without_physical_location():
-        # query = "SELECT u.id, u.location FROM user u, "+DatabaseHandler.ACCOUNTS_JOIN_TABLE+" uc " \
-        #         "WHERE lcase(u.screen_name) = lcase(uc.name) and u.physical_location is null;"
-        query = "SELECT u.id, u.location FROM user u WHERE u.physical_location is null;"
-        cur = DatabaseHandler.db.cursor()
-        cur.execute(query)
-        DatabaseHandler.db.commit()
-        res = cur.fetchall()
-        cur.close()
-        return res
+    def insert_countries(df, country_col_name):
+        no_country = df[df[country_col_name].isna()]
+        no_location = no_country['location'].isna()
+        no_country_yes_location = no_country[~no_location]
+        df[country_col_name] = no_country_yes_location['location'].apply(LocationFinder.find_country)
 
-    @staticmethod
-    def insert_physical_location(user_id, loc):
-        query = "UPDATE user SET physical_location=%s, country=%s WHERE id=%s;"
-        cur = DatabaseHandler.db.cursor()
-        cur.execute(query,(loc['address'], loc['country'], user_id))
-        DatabaseHandler.db.commit()
-        cur.close()
+        return df
 
-    @staticmethod
-    def insert_physical_locations():
-        accs = LocationFinder.get_accounts_without_physical_location()
-        for acc in accs:
-            if acc['location'] != '':
-                location = LocationFinder.find_physical_location(acc['location'])
-                LocationFinder.insert_physical_location(acc['id'], location)
+def main():
+    logging.basicConfig(filename='gmaps.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(message)s')
+
+    READ_CSV = 'dev_users.csv'
+    print(f'Reading: {READ_CSV}')
+    df = pd.read_csv(READ_CSV)
+
+    df['country'] = np.nan
+    loc_col = 'country'
+
+    df = LocationFinder.insert_countries(df, loc_col)
+
+    df.to_csv('locations.csv', index=False)
 
 if __name__ == "__main__":
-    LocationFinder.insert_physical_locations()
+    main()
+
