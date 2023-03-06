@@ -134,6 +134,7 @@ dmypy.json
 .idea/dictionaries
 .idea/vcs.xml
 .idea/jsLibraryMappings.xml
+.DS_Store
 
 # Data Folder
 data/
