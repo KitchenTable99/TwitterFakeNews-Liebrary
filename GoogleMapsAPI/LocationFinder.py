@@ -1,4 +1,5 @@
 import json
+from tqdm import tqdm
 import logging
 import numpy as np
 import os
@@ -8,8 +9,10 @@ from urllib import request
 import editdistance as editdistance
 import re
 
+tqdm.pandas()
+
 def remove_urls(loc_name):
-    return re.sub('(?P<url>https?://[^\s]+)', '', text)
+    return re.sub('(?P<url>https?://[^\s]+)', '', loc_name)
 
 
 class LocationFinder:
@@ -75,7 +78,7 @@ class LocationFinder:
         no_country = df[df[country_col_name].isna()]
         no_location = no_country['location'].isna()
         no_country_yes_location = no_country[~no_location]
-        df[country_col_name] = no_country_yes_location['location'].apply(LocationFinder.find_country)
+        df[country_col_name] = no_country_yes_location['location'].progress_apply(LocationFinder.find_country)
 
         return df
 
