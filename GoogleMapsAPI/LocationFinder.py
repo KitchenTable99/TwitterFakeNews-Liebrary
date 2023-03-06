@@ -1,10 +1,9 @@
-import json
 from tqdm import tqdm
 import logging
 import numpy as np
 import os
 import pandas as pd
-from urllib import request
+import requests
 
 import editdistance as editdistance
 import re
@@ -41,10 +40,8 @@ class LocationFinder:
         location['address'] = None
         location['country'] = None
         if url_location.replace(' ', '') != '':
-            logging.debug(url_location)
-            reply = request.urlopen(LocationFinder.pre+url_location+LocationFinder.post).read().decode("utf-8")
+            json_reply = requests.get(LocationFinder.pre+url_location+LocationFinder.post).json()
 
-            json_reply = json.loads(reply)
             logging.debug(f'{json_reply = }')
             if json_reply['status'] == 'OK':
                 best_res = None
@@ -85,7 +82,7 @@ class LocationFinder:
 def main():
     logging.basicConfig(filename='gmaps.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(message)s')
 
-    READ_CSV = 'dev_users.csv'
+    READ_CSV = 'user_info.csv'
     print(f'Reading: {READ_CSV}')
     df = pd.read_csv(READ_CSV)
 
