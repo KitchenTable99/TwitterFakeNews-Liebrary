@@ -9,8 +9,7 @@ import editdistance as editdistance
 import re
 
 def remove_urls(loc_name):
-    #BUG: actually remove urls
-    return loc_name
+    return re.sub('(?P<url>https?://[^\s]+)', '', text)
 
 
 class LocationFinder:
