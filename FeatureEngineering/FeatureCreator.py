@@ -9,7 +9,6 @@ import re
 
 from nltk import ngrams
 
-from Database.DatabaseHandler import DatabaseHandler as db
 from NLP.Emoji import Emojis
 from NLP.NLPUtils import NLPUtils
 from NLP.TermWeighter import TermWeighter
