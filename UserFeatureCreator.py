@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import Optional
+from typing import Optional, Dict
 import logging
 
 from FeatureEngineering.FeatureCreator import contains_hashtag, contains_user_mention, contains_url, string_length, \
@@ -48,43 +48,42 @@ def create_user_features(user_df: pd.DataFrame, feature_df: Optional[pd.DataFram
     return feature_df
 
 
-def get_depth2_tweet_features(d2_tweets: pd.DataFrame, feature_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+def get_depth2_tweet_features(d2_tweets: pd.DataFrame) -> Dict:
     """Takes in ALL depth=2 tweets for a given user in the dataset and
-    returns a DataFrame with all of the depth=2 features"""
+    returns a dictionary with values for the appropriate features"""
 
-    if not feature_df:
-        feature_df = pd.DataFrame()
+    feature_dict = dict()
 
-    feature_df['avg_user_mention_per_tweet'] = get_avg_user_mentions_per_tweet(d2_tweets)
-    feature_df['avg_hashtags_per_tweet'] = get_avg_hashtags_per_tweet(d2_tweets)
-    feature_df['avg_urls_per_tweet'] = get_avg_urls_per_tweet(id)
+    feature_dict['avg_user_mention_per_tweet'] = get_avg_user_mentions_per_tweet(d2_tweets)
+    feature_dict['avg_hashtags_per_tweet'] = get_avg_hashtags_per_tweet(d2_tweets)
+    feature_dict['avg_urls_per_tweet'] = get_avg_urls_per_tweet(d2_tweets)
 
-    feature_df['percent_with_url'] = get_percent_with_url(d2_tweets)
-    feature_df['percent_with_hashtag'] = get_percent_with_hashtag(d2_tweets)
-    feature_df['percent_with_user_mention'] = get_percent_with_user_mention(d2_tweets)
+    feature_dict['percent_with_url'] = get_percent_with_url(d2_tweets)
+    feature_dict['percent_with_hashtag'] = get_percent_with_hashtag(d2_tweets)
+    feature_dict['percent_with_user_mention'] = get_percent_with_user_mention(d2_tweets)
 
     # tweet times
-    feature_df['avg_post_time'] = get_avg_post_time(d2_tweets)
-    feature_df['tweets_per_day'] = get_tweets_per_day(d2_tweets)
-    feature_df['tweets_per_week'] = get_tweets_per_week(d2_tweets)
-    feature_df['min_time_between_tweets'] = get_minimum_time_between_tweets(d2_tweets)
-    feature_df['max_time_between_tweets'] = get_maximum_time_between_tweets(d2_tweets)
-    feature_df['median_time_between_tweets'] = get_median_time_between_tweets(d2_tweets)
-    feature_df['avg_time_between_tweets'] = get_avg_time_between_tweets(id)
+    feature_dict['avg_post_time'] = get_avg_post_time(d2_tweets)
+    feature_dict['tweets_per_day'] = get_tweets_per_day(d2_tweets)
+    feature_dict['tweets_per_week'] = get_tweets_per_week(d2_tweets)
+    feature_dict['min_time_between_tweets'] = get_minimum_time_between_tweets(d2_tweets)
+    feature_dict['max_time_between_tweets'] = get_maximum_time_between_tweets(d2_tweets)
+    feature_dict['median_time_between_tweets'] = get_median_time_between_tweets(d2_tweets)
+    feature_dict['avg_time_between_tweets'] = get_avg_time_between_tweets(d2_tweets)
 
     # nr of tweets/retweets/quotes/replies
-    feature_df['nr_of_retweets'] = get_nr_of_retweets_by_user(d2_tweets)
-    feature_df['nr_of_retweets_per_tweet'] = get_nr_of_retweets_per_tweet(d2_tweets)
-    feature_df['nr_of_quotes'] = get_nr_of_quotes_by_user(d2_tweets)
-    feature_df['nr_of_quotes_per_tweet'] = get_nr_of_quotes_per_tweet(d2_tweets)
-    feature_df['nr_of_replies'] = get_nr_of_replies_by_user(d2_tweets)
-    feature_df['nr_of_replies_per_tweet'] = get_nr_of_replies_per_tweet(d2_tweets)
+    feature_dict['nr_of_retweets'] = get_nr_of_retweets_by_user(d2_tweets)
+    feature_dict['nr_of_retweets_per_tweet'] = get_nr_of_retweets_per_tweet(d2_tweets)
+    feature_dict['nr_of_quotes'] = get_nr_of_quotes_by_user(d2_tweets)
+    feature_dict['nr_of_quotes_per_tweet'] = get_nr_of_quotes_per_tweet(d2_tweets)
+    feature_dict['nr_of_replies'] = get_nr_of_replies_by_user(d2_tweets)
+    feature_dict['nr_of_replies_per_tweet'] = get_nr_of_replies_per_tweet(d2_tweets)
 
     # additional user features
-    feature_df['has_tweets_in_different_lang'] = get_user_lang_counts(d2_tweets) > 1
-    feature_df['tweets_in_different_lang'] = get_user_lang_counts(d2_tweets)
+    feature_dict['has_tweets_in_different_lang'] = get_user_lang_counts(d2_tweets) > 1
+    feature_dict['tweets_in_different_lang'] = get_user_lang_counts(d2_tweets)
 
-    return feature_df
+    return feature_dict
 
 
 def favourites_per_follower(x):
@@ -125,7 +124,8 @@ def main():
     logging.basicConfig(filename='user_features.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(message)s')
     blank_user_df = pd.DataFrame()
     user_df = pd.read_csv('prepped.csv')
-    user_level = create_user_features(user_df)
+    user_tweets = pd.read_parquet('fifthf.parquet.gzip')
+    user_level = get_depth2_tweet_features(user_tweets)
     print(user_level)
 
 
