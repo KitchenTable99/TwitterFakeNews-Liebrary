@@ -406,7 +406,7 @@ class DatabaseHandler:
             json.dump(non_en_accs, outfile)
 
     @staticmethod
-    def get_user_lang_counts(user_id):
+    def get_user_lang_counts(tweet_df):
         """returns the languages of tweets by a user. 'und' is not counted"""
         query = "SELECT count(t.lang) as lang_count, t.lang FROM tweet t " \
                 "WHERE t.user_id = %s " \
@@ -431,7 +431,7 @@ class DatabaseHandler:
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def get_nr_of_retweets_by_user(user_id):
+    def get_nr_of_retweets_by_user(tweet_df):
         """returns the number of tweets this user_id has retweeted"""
         query = "SELECT count(retweeted_status_id) as count From tweet " \
                 "WHERE tweet.user_id = %s"
@@ -445,7 +445,7 @@ class DatabaseHandler:
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def get_nr_of_quotes_by_user(user_id):
+    def get_nr_of_quotes_by_user(tweet_df):
         """returns the number of tweets this user_id has quoted"""
         query = "SELECT count(quoted_status_id) as count From tweet " \
                 "WHERE tweet.user_id = %s"
@@ -459,7 +459,7 @@ class DatabaseHandler:
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def get_nr_of_replies_by_user(user_id):
+    def get_nr_of_replies_by_user(tweet_df):
         """returns the number of tweets this user_id has quoted"""
         query = "SELECT count(in_reply_to_status_id) as count From tweet " \
                 "WHERE tweet.user_id = %s"
@@ -489,7 +489,7 @@ class DatabaseHandler:
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def get_nr_of_user_mentions(user_id):
+    def get_nr_of_user_mentions(tweet_df):
         """returns the total number of user mentions in a users tweets"""
         query = "SELECT count(eu.user_mentions_id) as count " \
                 "FROM tweet, entity, entity_user_mentions eu " \
@@ -506,7 +506,7 @@ class DatabaseHandler:
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def get_nr_of_hashtags(user_id):
+    def get_nr_of_hashtags(tweet_df):
         query = "SELECT count(eh.hashtag) as count FROM tweet, entity, entity_hashtag eh " \
                 "WHERE tweet.user_id = %s " \
                 "AND tweet.entities_id = entity.id " \
@@ -718,7 +718,7 @@ class DatabaseHandler:
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def get_user_location(user_id):
+    def get_user_location(tweet_df):
         query = "SELECT location " \
                 "FROM user " \
                 "WHERE id = %s;"
@@ -733,7 +733,7 @@ class DatabaseHandler:
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def get_user_utc_offset(user_id):
+    def get_user_utc_offset(tweet_df):
         query = "SELECT utc_offset " \
                 "FROM user " \
                 "WHERE id = %s;"
@@ -747,7 +747,7 @@ class DatabaseHandler:
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def get_post_times_of_user(user_id):
+    def get_post_times_of_user(tweet_df):
         query = "SELECT t.created_at " \
                 "FROM tweet t " \
                 "WHERE t.user_id = %s;"

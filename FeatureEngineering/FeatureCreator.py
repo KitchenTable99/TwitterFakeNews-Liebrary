@@ -390,17 +390,10 @@ def find_frequent_pos_trigrams(data, min_doc_frequency=10000, no_above=0.5, keep
                                             keep_n=keep_n)
 
 
-@lru_cache(maxsize=None)
-def get_user_lang_counts(user_id):
+def get_user_lang_counts(tweet_df):
     """counts the languages used by a user. Does not count lang 'und' since language
     is automatically detected by twitter and almost every account contains a tweet with undefined language"""
-    lang_counts = db.get_user_lang_counts(user_id)
-
-    count = 0
-    for c in lang_counts:
-        if c['lang'] != 'und':
-            count += 1
-    return count
+    return len(tweet_df.groupby(['lang'])) - 1
 
 
 def favourites_per_follower(x):
@@ -655,264 +648,132 @@ def get_tweet_text_length(text, quoted):
     return length
 
 
-@lru_cache(maxsize=None)
-def get_avg_post_time(user_id):
+def get_avg_post_time(tweet_df):
     """returns the average post time in hours of day"""
-    avg_times = db.get_post_times_of_user(user_id)
-    tz = db.get_user_utc_offset(user_id)
-    sum = 0
-    for t in avg_times:
-        local_time = TimeUtils.utc_to_timezone(t, tz)
-        sum += local_time.hour
-
-    return sum / len(avg_times)
+    return tweet_df['created_at'].dt.hour.mean()
 
 
-@lru_cache(maxsize=None)
-def get_tweets_per_month(user_id):
-    """returns the average number of tweets per month.
-    First and last month in the database are omitted since it can't be assumed that they are complete."""
-    times = sorted(db.get_post_times_of_user(user_id))
-    counts = dict()
-    month = ""
-    first_omitted = False
-    for t in times:
-        # dont count first
-        if month != str(t.month) + "_" + str(t.year) and month != "":
-            first_omitted = True
-        month = str(t.month) + "_" + str(t.year)
-
-        if first_omitted:
-            if month not in counts:
-                counts[month] = 1
-            else:
-                counts[month] += 1
-
-    counts.pop(month, None)
-
-    total = sum(counts.values())
-    count = len(counts)
-
-    if count == 0:
-        return 0
-    return total / count
-
-
-@lru_cache(maxsize=None)
-def get_tweets_per_week(user_id):
+def get_tweets_per_week(tweet_df):
     """returns the average number of tweets per week.
-    First and last week in the database are omitted since it can't be assumed that they are complete."""
-    times = sorted(db.get_post_times_of_user(user_id))
-    counts = dict()
-    week = ""
-    first_omitted = False
-    for t in times:
-        # dont count first
-        if week != str(t.isocalendar()[1]) + "_" + str(t.year) and week != "":
-            first_omitted = True
-        week = str(t.isocalendar()[1]) + "_" + str(t.year)
-
-        if first_omitted:
-            if week not in counts:
-                counts[week] = 1
-            else:
-                counts[week] += 1
-
-    counts.pop(week, None)
-
-    total = sum(counts.values())
-    count = len(counts)
-
-    if count == 0:
-        return 0
-    return total / count
+    earliest week in the database are omitted since it can't be assumed to be complete."""
+    tweet_df['yearweek'] = tweet_df['created_at'].dt.isocalendar().apply(lambda x: str(x['year']) + str(x['week']), axis=1)
+    
+    return tweet_df.groupby(['yearweek']).size().iloc[1:].mean()
 
 
-@lru_cache(maxsize=None)
-def get_maximum_time_between_tweets(user_id):
+def get_maximum_time_between_tweets(tweet_df):
     """calculates the maximum time between two tweets of a user"""
-    times = sorted(db.get_post_times_of_user(user_id))
-    max_diff = 0
+    sorted_tweets = tweet_df.sort_values(by='created_at')
 
-    length = len(times)
-    n = 2
-    for i in range(length - n + 1):
-        compare = list()
-        for j in range(i, i + n):
-            compare.append(times[j])
-        diff = TimeUtils.time_diff_in_min(compare[1], compare[0])
-        if diff > max_diff:
-            max_diff = diff
-    return max_diff
+    return sorted_tweets['created_at'].diff().max()
 
 
-@lru_cache(maxsize=None)
-def get_minimum_time_between_tweets(user_id):
+def get_minimum_time_between_tweets(tweet_df):
     """calculates the minimum time between two tweets of a user"""
-    times = sorted(db.get_post_times_of_user(user_id))
-    min_diff = 0
+    sorted_tweets = tweet_df.sort_values(by='created_at')
 
-    length = len(times)
-    n = 2
-    for i in range(length - n + 1):
-        compare = list()
-        for j in range(i, i + n):
-            compare.append(times[j])
-        diff = TimeUtils.time_diff_in_min(compare[1], compare[0])
-        if diff > min_diff:
-            min_diff = diff
-    return min_diff
+    return sorted_tweets['created_at'].diff().min()
 
 
-@lru_cache(maxsize=None)
-def get_median_time_between_tweets(user_id):
+def get_median_time_between_tweets(tweet_df):
     """calculates the median time between two tweets of a user"""
-    times = sorted(db.get_post_times_of_user(user_id))
+    sorted_tweets = tweet_df.sort_values(by='created_at')
 
-    diffs = list()
-
-    length = len(times)
-    n = 2
-    for i in range(length - n + 1):
-        compare = list()
-        for j in range(i, i + n):
-            compare.append(times[j])
-        diffs.append(TimeUtils.time_diff_in_min(compare[1], compare[0]))
-
-    if diffs:
-        return median(sorted(diffs))
-    else:
-        return 0
+    return sorted_tweets['created_at'].diff().median()
 
 
-@lru_cache(maxsize=None)
-def get_avg_time_between_tweets(user_id):
+def get_avg_time_between_tweets(tweet_df):
     """calculates the avg time between two tweets of a user"""
-    times = sorted(db.get_post_times_of_user(user_id))
+    sorted_tweets = tweet_df.sort_values(by='created_at')
 
-    diffs = list()
-
-    length = len(times)
-    n = 2
-    for i in range(length - n + 1):
-        compare = list()
-        for j in range(i, i + n):
-            compare.append(times[j])
-        diffs.append(TimeUtils.time_diff_in_min(compare[1], compare[0]))
-    if diffs:
-        return sum(diffs) / len(diffs)
-    else:
-        return 0
+    return sorted_tweets['created_at'].diff().mean()
 
 
-@lru_cache(maxsize=None)
-def get_tweets_per_day(user_id):
+def get_tweets_per_day(tweet_df):
     """returns the average number of tweets per day.
-    First and last day in the database are omitted since it can't be assumed that they are complete."""
-    times = sorted(db.get_post_times_of_user(user_id))
-    counts = dict()
-    day = ""
-    first_omitted = False
-    for t in times:
-        # dont count first
-        if day != str(t.day) + "_" + str(t.month) + "_" + str(t.year) and day != "":
-            first_omitted = True
-        day = str(t.day) + "_" + str(t.month) + "_" + str(t.year)
+    earliest day in the database are omitted since it can't be assumed that it is complete."""
+    tweet_df['date'] = tweet_df['created_at'].apply(lambda x: x.date())
 
-        if first_omitted:
-            if day not in counts:
-                counts[day] = 1
-            else:
-                counts[day] += 1
-
-    counts.pop(day, None)
-
-    total = sum(counts.values())
-    count = len(counts)
-
-    if count == 0:
-        return 0
-    return total / count
+    return tweet_df.groupby(['date']).size().iloc[1:].mean()
 
 
-@lru_cache(maxsize=None)
-def get_avg_user_mentions_per_tweet(user_id):
+def get_avg_user_mentions_per_tweet(tweet_df):
     """returns the average number of user mentions per tweet of user user_id"""
-    return int(db.get_nr_of_user_mentions(user_id)) / len(db.get_tweets_of_user(user_id, ['id']))
+    num_tweets = len(tweet_df)
+    total_mentions = tweet_df['mentions'].apply(lambda x: x.count('username') if x else 0).sum()
+
+    return total_mentions // num_tweets
 
 
-@lru_cache(maxsize=None)
-def get_avg_hashtags_per_tweet(user_id):
+def get_avg_hashtags_per_tweet(tweet_df):
     """returns the average number of hashtags per tweet of user user_id"""
-    return int(db.get_nr_of_hashtags(user_id)) / len(db.get_tweets_of_user(user_id, ['id']))
+    num_tweets = len(tweet_df)
+    total_hashtags = tweet_df['hashtags'].apply(lambda x: x.count('tag') if x else 0).sum()
+
+    return total_hashtags // num_tweets
 
 
-@lru_cache(maxsize=None)
-def get_avg_urls_per_tweet(user_id):
+def get_avg_urls_per_tweet(tweet_df):
     """returns the average number of urls per tweet of user user_id"""
-    ids = db.get_tweets_of_user(user_id, ['entities_id', 'text'])
-    sum = 0
-    for id in ids:
-        sum += tweet_nr_of_urls(id['entities_id'], id['text'])
+    num_tweets = len(tweet_df)
+    total_urls = tweet_df['urls'].apply(lambda x: x.count('url') if x else 0).sum()
 
-    return sum / len(ids)
+    return total_urls // num_tweets
 
 
-@lru_cache(maxsize=None)
-def get_percent_with_url(user_id):
+def get_percent_with_url(tweet_df):
     """returns the percentage of tweets of user user_id that contains at least one url"""
-    ids = db.get_tweets_of_user(user_id, ['entities_id', 'text'])
-    sum = 0
-    for id in ids:
-        if tweet_contains_urls(id['entities_id'], id['text']):
-            sum += 1
+    num_tweets = len(tweet_df)
+    url_counts = tweet_df['urls'].apply(lambda x: x.count('url') if x else 0)
+    at_least_one = url_counts.apply(lambda x: x >= 1).sum()
 
-    return sum / len(ids)
+    return at_least_one / num_tweets
 
 
-@lru_cache(maxsize=None)
-def get_percent_with_hashtag(user_id):
+def get_percent_with_hashtag(tweet_df):
     """returns the percentage of tweets of user user_id that contains at least one hashtag"""
-    ids = db.get_tweets_of_user(user_id, ['entities_id'])
-    sum = 0
-    for id in ids:
-        if tweet_contains_hashtags(id['entities_id']):
-            sum += 1
+    num_tweets = len(tweet_df)
+    tag_counts = tweet_df['hashtags'].apply(lambda x: x.count('tag') if x else 0)
+    at_least_one = tag_counts.apply(lambda x: x >= 1).sum()
 
-    return sum / len(ids)
+    return at_least_one / num_tweets
 
 
-@lru_cache(maxsize=None)
-def get_percent_with_user_mention(user_id):
+def get_percent_with_user_mention(tweet_df):
     """returns the percentage of tweets of user user_id that contains at least one user_mention"""
-    ids = db.get_tweets_of_user(user_id, ['entities_id'])
-    sum = 0
-    for id in ids:
-        if tweet_contains_user_mention(id['entities_id']):
-            sum += 1
+    num_tweets = len(tweet_df)
+    mention_counts = tweet_df['mentions'].apply(lambda x: x.count('username') if x else 0)
+    at_least_one = mention_counts.apply(lambda x: x >= 1).sum()
 
-    return sum / len(ids)
+    return at_least_one / num_tweets
 
 
-@lru_cache(maxsize=None)
-def get_nr_of_retweets_per_tweet(user_id):
-    nr_of_retweets = db.get_nr_of_retweets_by_user(user_id)
+def get_nr_of_retweets_by_user(tweet_df):
+    return tweet_df.groupby(['tweet_type']).size()['retweet']
 
-    return nr_of_retweets / len(db.get_tweets_of_user(user_id, ['id']))
+def get_nr_of_quotes_by_user(tweet_df):
+    return tweet_df.groupby(['tweet_type']).size()['qrt']
 
-
-@lru_cache(maxsize=None)
-def get_nr_of_replies_per_tweet(user_id):
-    nr_of_replies = db.get_nr_of_replies_by_user(user_id)
-
-    return nr_of_replies / len(db.get_tweets_of_user(user_id, ['id']))
+def get_nr_of_replies_by_user(tweet_df):
+    return tweet_df.groupby(['tweet_type']).size()['reply']
 
 
-@lru_cache(maxsize=None)
-def get_nr_of_quotes_per_tweet(user_id):
-    nr_of_quotes = db.get_nr_of_quotes_by_user(user_id)
+def get_nr_of_retweets_per_tweet(tweet_df):
+    nr_of_retweets = tweet_df.groupby(['tweet_type']).size()['retweet']
 
-    return nr_of_quotes / len(db.get_tweets_of_user(user_id, ['id']))
+    return nr_of_retweets / len(tweet_df)
+
+
+def get_nr_of_replies_per_tweet(tweet_df):
+    nr_of_replies = tweet_df.groupby(['tweet_type']).size()['reply']
+
+    return nr_of_replies / len(tweet_df)
+
+
+def get_nr_of_quotes_per_tweet(tweet_df):
+    nr_of_quotes = tweet_df.groupby(['tweet_type']).size()['qrt']
+
+    return nr_of_quotes / len(tweet_df)
 
 
 def get_possibly_sensitive(x):
