@@ -41,7 +41,7 @@ def create_user_features(user_df: pd.DataFrame, feature_df: Optional[pd.DataFram
     # followers, favourites, friends, lists
     feature_df['has_list'] = user_df['listed_count'] > 0
     feature_df['has_friends'] = user_df['friends_count'] > 0
-    feature_df['friends_per_follower'] = user_df['friends_count'] / user_df['followers_count']
+    feature_df['friends_per_follower'] = user_df.apply(lambda x: friends_per_follower(x), axis=1)
     feature_df['is_following_more_than_100'] = user_df['friends_count'] >= 100
     feature_df['at_least_30_follower'] = user_df['followers_count'] >= 30
 
@@ -92,6 +92,8 @@ def favourites_per_follower(x):
 
 def friends_per_follower(x):
     """return #favourties/#followers"""
+    if x['followers_count'] == 0:
+        return 0
     return x['friends_count'] / x['followers_count']
 
 
