@@ -2,7 +2,7 @@ import pandas as pd
 
 
 def main():
-    twarc_df = pd.read_csv('dev_users.csv')
+    twarc_df = pd.read_csv('user_info.csv')
     twarc_df = twarc_df.rename(columns={
         'public_metrics.following_count': 'friends_count',
         'public_metrics.followers_count': 'followers_count',

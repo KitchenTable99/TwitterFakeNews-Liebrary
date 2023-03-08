@@ -122,11 +122,10 @@ def user__has_location(loc):
 
 def main():
     logging.basicConfig(filename='user_features.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(message)s')
-    blank_user_df = pd.DataFrame()
     user_df = pd.read_csv('prepped.csv')
-    user_tweets = pd.read_parquet('fifthf.parquet.gzip')
-    user_level = get_depth2_tweet_features(user_tweets)
-    print(user_level)
+
+    user_features = create_user_features(user_df)
+    user_features.to_parquet('user_features.parquet.gzip', compression='gzip', index=False)
 
 
 if __name__ == "__main__":
