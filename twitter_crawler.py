@@ -121,6 +121,8 @@ def extract_depth_2():
     all_depth_features = pd.DataFrame(user_depth_features)
     print(all_depth_features)
 
+    with open('depth_features.pickle', 'wb') as fp:
+        pickle.dump(all_depth_features, fp)
     all_depth_features.to_parquet('user_depth_features.parquet.gzip', compression='gzip', index=False)
 
 def likes():
