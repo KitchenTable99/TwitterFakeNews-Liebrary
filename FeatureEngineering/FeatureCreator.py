@@ -23,6 +23,8 @@ from Utility.UrlUtils import UrlUtils
 punctuation = NLPUtils.get_punctuation()
 
 
+SECONDS_IN_DAY = 86400
+
 def create_features(data, conf=None):
     print("...create features...")
 
@@ -690,11 +692,12 @@ def get_avg_time_between_tweets(tweet_df):
 
 
 def get_tweets_per_day(tweet_df):
-    """returns the average number of tweets per day.
-    earliest day in the database are omitted since it can't be assumed that it is complete."""
-    tweet_df['date'] = tweet_df['created_at'].apply(lambda x: x.date())
+    """returns the average number of tweets per day. Imputed based on frequency of tweets per second in the sample"""
+    duration = tweet_df['created_at'].max() - tweet_df['created_at'].min()
+    duration_seconds = duration.total_seconds()
+    tweets_per_second = len(tweet_df) / duration_seconds
 
-    return tweet_df.groupby(['date']).size().iloc[1:].mean()
+    return tweets_per_second / SECONDS_IN_DAY
 
 
 def get_avg_user_mentions_per_tweet(tweet_df):

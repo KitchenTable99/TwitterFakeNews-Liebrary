@@ -4,7 +4,7 @@ import logging
 
 from FeatureEngineering.FeatureCreator import contains_hashtag, contains_user_mention, contains_url, string_length, \
     get_avg_user_mentions_per_tweet, get_avg_hashtags_per_tweet, get_avg_urls_per_tweet, \
-    get_avg_post_time, get_tweets_per_week, get_tweets_per_day, get_minimum_time_between_tweets, \
+    get_avg_post_time, get_tweets_per_day, get_minimum_time_between_tweets, \
     get_maximum_time_between_tweets, get_median_time_between_tweets, get_avg_time_between_tweets, \
     get_nr_of_retweets_per_tweet, get_nr_of_quotes_per_tweet, get_nr_of_replies_per_tweet, \
     get_user_lang_counts, get_percent_with_url, get_percent_with_hashtag, get_percent_with_user_mention, \
@@ -65,7 +65,6 @@ def get_depth2_tweet_features(d2_tweets: pd.DataFrame) -> Dict:
     # tweet times
     feature_dict['avg_post_time'] = get_avg_post_time(d2_tweets)
     feature_dict['tweets_per_day'] = get_tweets_per_day(d2_tweets)
-    feature_dict['tweets_per_week'] = get_tweets_per_week(d2_tweets)
     feature_dict['min_time_between_tweets'] = get_minimum_time_between_tweets(d2_tweets)
     feature_dict['max_time_between_tweets'] = get_maximum_time_between_tweets(d2_tweets)
     feature_dict['median_time_between_tweets'] = get_median_time_between_tweets(d2_tweets)
