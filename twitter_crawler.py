@@ -1,4 +1,5 @@
 import glob
+import logging
 import pickle
 import pandas as pd
 from tqdm import tqdm as progress
@@ -154,4 +155,5 @@ def likes():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(filename='twetter_crawler.log', encoding='utf-8', level=logging.INFO, format='%(asctime)s - %(message)s')
     extract_depth_2()

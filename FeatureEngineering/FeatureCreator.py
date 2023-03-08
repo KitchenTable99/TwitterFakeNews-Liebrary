@@ -1,4 +1,5 @@
 import json
+import numpy as np
 from collections import Counter
 from functools import lru_cache
 
@@ -655,16 +656,12 @@ def get_avg_post_time(tweet_df):
     return tweet_df['created_at'].dt.hour.mean()
 
 
-def get_tweets_per_week(tweet_df):
-    """returns the average number of tweets per week.
-    earliest week in the database are omitted since it can't be assumed to be complete."""
-    tweet_df['yearweek'] = tweet_df['created_at'].dt.isocalendar().apply(lambda x: str(x['year']) + str(x['week']), axis=1)
-    
-    return tweet_df.groupby(['yearweek']).size().iloc[1:].mean()
-
-
 def get_maximum_time_between_tweets(tweet_df):
     """calculates the maximum time between two tweets of a user"""
+    if len(tweet_df) == 1:
+        return np.inf
+        # since all passed DataFrames represent either every tweet an account has made or the most recent 100 tweets, 
+        # this edge case only occurs when an account tweets exactly once. That is basically never tweeting so I return np.inf
     sorted_tweets = tweet_df.sort_values(by='created_at')
 
     return sorted_tweets['created_at'].diff().max()
@@ -672,6 +669,10 @@ def get_maximum_time_between_tweets(tweet_df):
 
 def get_minimum_time_between_tweets(tweet_df):
     """calculates the minimum time between two tweets of a user"""
+    if len(tweet_df) == 1:
+        return np.inf
+        # since all passed DataFrames represent either every tweet an account has made or the most recent 100 tweets, 
+        # this edge case only occurs when an account tweets exactly once. That is basically never tweeting so I return np.inf
     sorted_tweets = tweet_df.sort_values(by='created_at')
 
     return sorted_tweets['created_at'].diff().min()
@@ -679,6 +680,10 @@ def get_minimum_time_between_tweets(tweet_df):
 
 def get_median_time_between_tweets(tweet_df):
     """calculates the median time between two tweets of a user"""
+    if len(tweet_df) == 1:
+        return np.inf
+        # since all passed DataFrames represent either every tweet an account has made or the most recent 100 tweets, 
+        # this edge case only occurs when an account tweets exactly once. That is basically never tweeting so I return np.inf
     sorted_tweets = tweet_df.sort_values(by='created_at')
 
     return sorted_tweets['created_at'].diff().median()
@@ -686,6 +691,10 @@ def get_median_time_between_tweets(tweet_df):
 
 def get_avg_time_between_tweets(tweet_df):
     """calculates the avg time between two tweets of a user"""
+    if len(tweet_df) == 1:
+        return 0
+        # since all passed DataFrames represent either every tweet an account has made or the most recent 100 tweets, 
+        # this edge case only occurs when an account tweets exactly once. That is basically never tweeting so I return np.inf
     sorted_tweets = tweet_df.sort_values(by='created_at')
 
     return sorted_tweets['created_at'].diff().mean()
@@ -695,6 +704,12 @@ def get_tweets_per_day(tweet_df):
     """returns the average number of tweets per day. Imputed based on frequency of tweets per second in the sample"""
     duration = tweet_df['created_at'].max() - tweet_df['created_at'].min()
     duration_seconds = duration.total_seconds()
+    if duration_seconds == 0:
+        return 0
+        # this would only occur if the earliest and latest tweet in tweet_df was the same tweet
+        # since all passed DataFrames represent either every tweet an account has made or the most recent 100 tweets, 
+        # this edge case only occurs when an account tweets exactly once. That is basically never tweeting so I return 0
+
     tweets_per_second = len(tweet_df) / duration_seconds
 
     return tweets_per_second / SECONDS_IN_DAY

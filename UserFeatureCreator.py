@@ -17,7 +17,7 @@ def create_user_features(user_df: pd.DataFrame, feature_df: Optional[pd.DataFram
     creates the user features and returns them
     :return:
     """
-    logging.debug(f'{user_df = }\n{feature_df = }')
+    logging.info(f'{user_df = }\n{feature_df = }')
 
     if not feature_df:
         logging.info('Creating new feature dataframe')
@@ -51,6 +51,9 @@ def create_user_features(user_df: pd.DataFrame, feature_df: Optional[pd.DataFram
 def get_depth2_tweet_features(d2_tweets: pd.DataFrame) -> Dict:
     """Takes in ALL depth=2 tweets for a given user in the dataset and
     returns a dictionary with values for the appropriate features"""
+    logging.info('DESCRIPTION:' + str(d2_tweets.describe()))
+    logging.info('HEAD:' + str(d2_tweets.head()))
+    logging.info('LEN:' + str(len(d2_tweets)))
 
     feature_dict = dict()
 
@@ -110,7 +113,7 @@ def user__has_default_profile_after_two_month(u):
 
 
 def user__has_location(loc):
-    logging.debug(f'{loc = }')
+    logging.info(f'{loc = }')
     if loc is None:
         return False
     elif loc == '':
@@ -122,11 +125,14 @@ def user__has_location(loc):
 
 
 def main():
-    logging.basicConfig(filename='user_features.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(message)s')
+    logging.basicConfig(filename='user_features.log', encoding='utf-8', level=logging.INFO, format='%(asctime)s - %(message)s')
     user_df = pd.read_csv('prepped.csv')
-
+    
     user_features = create_user_features(user_df)
-    user_features.to_parquet('user_features.parquet.gzip', compression='gzip', index=False)
+    user_features.to_parquet('user_features2.parquet.gzip', compression='gzip', index=False)
+    # depth_df = pd.read_parquet('fifthf.parquet.gzip')
+    # get_depth2_tweet_features(depth_df)
+    
 
 
 if __name__ == "__main__":
