@@ -6,7 +6,7 @@ import pandas as pd
 from Learning.EvaluationMetrics import calc_recall, calc_precision
 from Learning.LearningMain import perform_x_val
 from Learning.LearningUtils import get_base_learners
-from NLP.NLPUtils import NLPUtils
+from NLPUtils import NLPUtils
 from TextRepresentation.Doc2Vec import Doc2Vec
 from TextRepresentation.TextModel import TextModel
 from Utility.CSVUtils import save_df_as_csv, load_data_from_CSV

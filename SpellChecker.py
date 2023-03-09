@@ -9,7 +9,6 @@ class SpellChecker(object):
     def __init__(self, dict_name='en_US', max_dist=2):
         self.spell_dict = enchant.Dict(dict_name)
         self.max_dist = max_dist
-        pass
 
     def correct(self, word, tag = ''):
         """replaces the word with the best suggested match according to the edit distance. 
@@ -31,7 +30,6 @@ class SpellChecker(object):
                 return best_sug
             else:
                 return word
-            pass
         else:
             return word
 

@@ -7,7 +7,7 @@ from FeatureSelection.SelectionUtils import read_var_thresh_results, read_featur
     read_feature_importance_results
 from Learning.EvaluationMetrics import calc_precision, calc_recall
 from Learning.LearningUtils import list_to_conf_matr, get_dataset_features
-from NLP.NLPUtils import NLPUtils
+from NLPUtils import NLPUtils
 from Utility.Util import get_root_directory
 
 

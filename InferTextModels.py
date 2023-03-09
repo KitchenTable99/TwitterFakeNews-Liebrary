@@ -4,7 +4,7 @@ import re
 import pandas as pd
 import numpy as np
 
-from NLP.NLPUtils import NLPUtils
+from NLPUtils import NLPUtils
 from TextRepresentation.Doc2Vec import Doc2Vec
 from TextRepresentation.TextModel import TextModel
 from Utility.CSVUtils import load_data_from_CSV, save_df_as_csv

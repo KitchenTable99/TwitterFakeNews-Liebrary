@@ -13,18 +13,7 @@ import os
 
 
 def get_root_directory():
-    curr = os.getcwd()
-    folders = curr.split("\\")
-    count = 0
-    for i in reversed(folders):
-        if i == 'TwitterFakeNews':
-            break
-        count += 1
-    if count == 0:
-        return '/'.join(folders)
-    else:
-        return '/'.join(folders[:-count])
-
+    return './'
 
 class NLPUtils:
 
@@ -103,9 +92,13 @@ class NLPUtils:
 
     @staticmethod
     def str_list_to_list(string):
-        if pd.isnull(string):
-            string = '[]'
-        return ast.literal_eval(string)
+        if not isinstance(string, str):
+            return NLPUtils.str_list_to_list(str(string))
+
+        if string == '[]':
+            return []
+        else:
+            return ast.literal_eval(string)
 
     @staticmethod
     def count_upper_case_tokens():

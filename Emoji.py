@@ -6,19 +6,8 @@ from functools import lru_cache
 
 from NLPUtils import NLPUtils
 
-import os
 def get_root_directory():
-    curr = os.getcwd()
-    folders = curr.split("\\")
-    count = 0
-    for i in reversed(folders):
-        if i == 'TwitterFakeNews':
-            break
-        count += 1
-    if count == 0:
-        return '/'.join(folders)
-    else:
-        return '/'.join(folders[:-count])
+    return './'
 
 
 class Emojis:
@@ -38,6 +27,19 @@ class Emojis:
         return text
 
     @staticmethod
+    def count_ascii_emojis(text):
+        """returns a map with the occurences of ascii emojis"""
+        emojis = Emojis.read_ascii_emojis()
+        ctr = Counter()
+        for e in emojis:
+            occurences = [m.start() for m in re.finditer(re.escape(e), text)]
+            # occurences = list(NLPUtils.find_all(re.escape(e), text))
+            if occurences:
+                # text = text.replace(e, ' ')
+                ctr[e] = len(occurences)
+        return sum(ctr.values())
+
+    @staticmethod
     def find_ascii_emojis(text, emojis):
         """returns a map with the occurences of ascii emojis"""
         ctr = Counter()
@@ -47,7 +49,7 @@ class Emojis:
             if occurences:
                 # text = text.replace(e, ' ')
                 ctr[e] = len(occurences)
-        return ctr
+        return list(ctr.keys())
 
     @staticmethod
     def find_unicode_emojis(text, category=None):
@@ -58,7 +60,7 @@ class Emojis:
         list_quad = list()
         list_pent = list()
 
-        from NLP.TextPreprocessor import TextPreprocessor
+        from TextPreprocessor import TextPreprocessor
 
         text = TextPreprocessor.remove_urls(text)
 

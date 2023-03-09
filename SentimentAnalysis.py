@@ -6,8 +6,7 @@ from nltk.corpus import sentiwordnet as swn
 from nltk.wsd import lesk
 from textblob import TextBlob
 
-from Database.DatabaseHandler import DatabaseHandler
-from NLP.Emoji import Emojis
+from Emoji import Emojis
 
 
 class SentimentAnalysis:
@@ -23,7 +22,7 @@ class SentimentAnalysis:
         :param tweet_pos: POS tagged tokens
         :return: sentiment score (pos_score - neg_score)
         """
-        from NLP.TextPreprocessor import TextPreprocessor
+        from TextPreprocessor import TextPreprocessor
         allowed_tags = ['a','n','v','r']
         pos_tag = pos_tag.lower()
         if pos_tag in allowed_tags:
@@ -174,7 +173,7 @@ class SentimentAnalysis:
         """
         from textblob.en.sentiments import PatternAnalyzer
         from textblob.en.sentiments import NaiveBayesAnalyzer
-        from NLP.NLPUtils import NLPUtils
+        from NLPUtils import NLPUtils
         words = list()
         for token in pos_tags:
             word = token['token']

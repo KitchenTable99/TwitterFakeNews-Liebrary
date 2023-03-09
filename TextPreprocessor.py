@@ -7,7 +7,7 @@ from nltk import PorterStemmer, WordNetLemmatizer
 
 from Emoji import Emojis
 from NLPUtils import NLPUtils
-#from NLP.SpellChecker import SpellChecker
+# from SpellChecker import SpellChecker
 
 
 class TextPreprocessor:
@@ -18,7 +18,7 @@ class TextPreprocessor:
     PUNCTUATION = NLPUtils.get_punctuation()
     STOPWORDS = NLPUtils.get_stopwords()
     # comment in to use ascii emojis (the emoji file path might need to be changed to the correct one (folder 'resources'))
-    # ASCII_EMOJIS = Emojis.read_ascii_emojis()
+    ASCII_EMOJIS = Emojis.read_ascii_emojis()
 
     @staticmethod
     def tokenize_tweet(tokenizer, tweet):
@@ -29,7 +29,7 @@ class TextPreprocessor:
 
     @staticmethod
     def additional_text_preprocessing_with_pos(pos_dict):
-        """performs additional text preprocessing based on the pos tagged text. Needs 32-bit Python, 
+        """performs additional text preprocessing based on the pos tagged text. Needs 32-bit Python,
         since no 64-bit Pyenchant version is available"""
 
         tags_to_lemmatize = ['a', 'n', 'v', 'r']
@@ -84,8 +84,7 @@ class TextPreprocessor:
         text = TextPreprocessor.remove_urls(text)
         # text = Emojis.remove_ascii_emojis(text, TextPreprocessor.ASCII_EMOJIS)
 
-        ascii_emojis = json.loads(ascii_emojis)
-        for e, count in ascii_emojis.items():
+        for e in ascii_emojis:
             text = re.sub(re.escape(e), '', text)
 
         unicode_emojis = NLPUtils.str_list_to_list(unicode_emojis)
@@ -135,7 +134,7 @@ class TextPreprocessor:
         pattern = re.compile(r"(\w)\1+")
         return pattern.sub(TextPreprocessor.repl, t)
 
-    # a function to perform the substitution we need:
+#     # a function to perform the substitution we need:
     @staticmethod
     def repl(matchObj):
         char = matchObj.group(1)
@@ -283,72 +282,72 @@ class TextPreprocessor:
 
         return token
 
-    @staticmethod
-    def replace_contractions_token(token):
-        """short form replacement from http://speakspeak.com/resources/english-grammar-rules/various-grammar-rules/short-forms-contractions
-        Some are ambiguous like 'd= had or would
-        DONE BY TweetTokenizer!!"""
-
-        token = TextPreprocessor.replace_short_form_match_part(token, "n't", " not")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "I'm", "I am")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "He's", "He is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "he's", "he is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "She's", "She is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "she's", "she is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "It's", "It is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "it's", "it is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "You're", "You are")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "you're", "you are")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "We're", "We are")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "we're", "we are")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "They're", "They are")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "they're", "they are")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "You've", "You have")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "you've", "you have")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "I've", "I have")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "We've", "We have")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "we've", "we have")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "They've", "They have")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "they've", "they have")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "Let's", "Let us")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "let's", "let us")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "Who's", "Who is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "who's", "who is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "Who'd", "Who would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "who'd", "who would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "What's", "What is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "what's", "what is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "How's", "How is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "how's", "how is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "When's", "When is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "when's", "when is")
-        # includes there's, where's
-        token = TextPreprocessor.replace_short_form_match_part(token, "here's", "here is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "Here's", "Here is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "There's", "There is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "there'd", "there would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "There'd", "There would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "that's", "that is")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "That's", "That is")
-        # 'll always resolves to ' will
-        token = TextPreprocessor.replace_short_form_match_part(token, "'ll", " will")
-
-        # ambiguous would and had
-        token = TextPreprocessor.replace_short_form_match_whole(token, "I'd", "I would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "He'd", "He would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "he'd", "he would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "She'd", "She would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "she'd", "she would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "It'd", "It would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "it'd", "it would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "You'd", "You would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "you'd", "you would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "We'd", "We would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "we'd", "we would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "They'd", "They would")
-        token = TextPreprocessor.replace_short_form_match_whole(token, "they'd", "they would")
-
-        return token
+    # @staticmethod
+    # def replace_contractions_token(token):
+    #     """short form replacement from http://speakspeak.com/resources/english-grammar-rules/various-grammar-rules/short-forms-contractions
+    #     Some are ambiguous like 'd= had or would
+    #     DONE BY TweetTokenizer!!"""
+    #
+    #     token = TextPreprocessor.replace_short_form_match_part(token, "n't", " not")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "I'm", "I am")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "He's", "He is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "he's", "he is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "She's", "She is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "she's", "she is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "It's", "It is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "it's", "it is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "You're", "You are")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "you're", "you are")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "We're", "We are")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "we're", "we are")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "They're", "They are")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "they're", "they are")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "You've", "You have")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "you've", "you have")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "I've", "I have")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "We've", "We have")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "we've", "we have")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "They've", "They have")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "they've", "they have")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "Let's", "Let us")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "let's", "let us")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "Who's", "Who is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "who's", "who is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "Who'd", "Who would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "who'd", "who would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "What's", "What is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "what's", "what is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "How's", "How is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "how's", "how is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "When's", "When is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "when's", "when is")
+    #     # includes there's, where's
+    #     token = TextPreprocessor.replace_short_form_match_part(token, "here's", "here is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "Here's", "Here is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "There's", "There is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "there'd", "there would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "There'd", "There would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "that's", "that is")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "That's", "That is")
+    #     # 'll always resolves to ' will
+    #     token = TextPreprocessor.replace_short_form_match_part(token, "'ll", " will")
+    #
+    #     # ambiguous would and had
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "I'd", "I would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "He'd", "He would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "he'd", "he would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "She'd", "She would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "she'd", "she would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "It'd", "It would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "it'd", "it would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "You'd", "You would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "you'd", "you would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "We'd", "We would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "we'd", "we would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "They'd", "They would")
+    #     token = TextPreprocessor.replace_short_form_match_whole(token, "they'd", "they would")
+    #
+    #     return token
 
     @staticmethod
     def replace_short_form_match_part(token, str_to_match, replacement):
@@ -411,7 +410,7 @@ class TextPreprocessor:
 
     @staticmethod
     def find_named_entities(pos_tags):
-        """Receives a pos tagged tweet, finds named entities using DBPedia Spotlight 
+        """Receives a pos tagged tweet, finds named entities using DBPedia Spotlight
         and joins the found entities into a single tag"""
         contains_proper_noun = False
         tokens = list()

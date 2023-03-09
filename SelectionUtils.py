@@ -9,7 +9,7 @@ from matplotlib.ticker import MaxNLocator
 from FeatureEngineering.FeatureSelector import get_feature_selection
 from Learning.EvaluationMetrics import calc_precision, calc_recall
 from Learning.LearningUtils import get_base_learners, list_to_conf_matr, get_clf_names, get_dataset_features
-from NLP.NLPUtils import NLPUtils
+from NLPUtils import NLPUtils
 from Utility.Util import get_root_directory
 
 

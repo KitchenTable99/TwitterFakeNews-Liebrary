@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 from gensim.models.doc2vec import TaggedDocument
 import os
 
-from NLP.NLPUtils import NLPUtils
-from NLP.TextPreprocessor import TextPreprocessor
+from NLPUtils import NLPUtils
+from TextPreprocessor import TextPreprocessor
 
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 

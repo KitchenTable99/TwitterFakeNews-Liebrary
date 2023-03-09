@@ -41,8 +41,8 @@ def create_features(data):
     # print("drop column tweet__unicode_emojis")
     # data = data.drop('tweet__unicode_emojis', 1)
 
-    data['tweet__nr_of_ascii_emojis'] = data['tweet__ascii_emojis'].map(
-        lambda x: sum(json_string_to_counter(x).values()))
+    data['tweet__nr_of_ascii_emojis'] = data['text'].map(
+            lambda x: Emojis.count_ascii_emojis(TextPreprocessor.remove_urls(x)))
     data['tweet__contains_ascii_emojis'] = data['tweet__nr_of_ascii_emojis'].map(lambda x: x > 0)
 
     data['tweet__nr_of_sentences'] = data['tweet__sent_tokenized_text'].map(lambda x: len(NLPUtils.str_list_to_list(x)))
@@ -52,9 +52,10 @@ def create_features(data):
     data['tweet__tokenized_um_url_removed'] = data['tweet__tokenized_text'].map(
         lambda x: remove_um_url(NLPUtils.str_list_to_list(x)))
 
-    data['tweet__has_place'] = ~(pd.isnull(data['tweet__place_id']))
-    data['tweet__has_location'] = ~(pd.isnull(data['tweet__location_id']))
-    data['tweet__possibly_sensitive_news'] = data['tweet__possibly_sensitive'].map(lambda x: get_possibly_sensitive(x))
+    # TODO:
+    # data['tweet__has_place'] = ~(pd.isnull(data['tweet__place_id']))
+    # data['tweet__has_location'] = ~(pd.isnull(data['tweet__location_id']))
+    data['tweet__possibly_sensitive_news'] = data['possibly_sensitive'].map(lambda x: get_possibly_sensitive(x))
     data['tweet__no_text'] = data['tweet__tokenized_um_url_removed'].map(
         lambda x: len(NLPUtils.str_list_to_list(x)) == 0)
 
@@ -62,23 +63,23 @@ def create_features(data):
         lambda x: get_nr_of_words(NLPUtils.str_list_to_list(x)))
 
     # pos tag related features
-    data['tweet__nr_tokens'] = data['tweet__pos_tags'].map(
-        lambda x: get_nr_of_words(NLPUtils.str_list_to_list(remove_um_url([t['token'] for t in json.loads(x)]))))
+    data['tweet__nr_tokens'] = data['tweet__tokenized_um_url_removed'].map(
+        lambda x: get_nr_of_words(x))
     data['tweet__ratio_adjectives'] = data.apply(
-        lambda x: get_tag_ratio(x['tweet__pos_tags'], 'A', x['tweet__nr_tokens']),
+        lambda x: get_tag_ratio(x['pos_tags'], 'A', x['tweet__nr_tokens']),
         axis=1)
-    data['tweet__ratio_nouns'] = data.apply(lambda x: get_tag_ratio(x['tweet__pos_tags'], 'N', x['tweet__nr_tokens']),
+    data['tweet__ratio_nouns'] = data.apply(lambda x: get_tag_ratio(x['pos_tags'], 'N', x['tweet__nr_tokens']),
                                             axis=1)
-    data['tweet__ratio_verbs'] = data.apply(lambda x: get_tag_ratio(x['tweet__pos_tags'], 'V', x['tweet__nr_tokens']),
+    data['tweet__ratio_verbs'] = data.apply(lambda x: get_tag_ratio(x['pos_tags'], 'V', x['tweet__nr_tokens']),
                                             axis=1)
-    data['tweet__contains_named_entities'] = data['tweet__pos_tags'].map(
-        lambda x: tweet_contains_named_entities(json.loads(x)))
-    data['tweet__contains_pronouns'] = data['tweet__pos_tags'].map(lambda x: "U" in [t['tag'] for t in json.loads(x)])
+    data['tweet__contains_named_entities'] = data['pos_tags'].map(
+        lambda x: tweet_contains_named_entities(x))
+    data['tweet__contains_pronouns'] = data['pos_tags'].map(lambda x: "U" in [t['tag'] for t in x])
 
     # POS trigrams
-    trigram_vectors = find_frequent_pos_trigrams(data, min_doc_frequency=1000, no_above=0.4, keep_n=100)
-    for key, vector in trigram_vectors.items():
-        data['tweet__contains_pos_trigram_{}'.format(re.sub(" ", "_", str(key)))] = vector
+    # trigram_vectors = find_frequent_pos_trigrams(data, min_doc_frequency=1000, no_above=0.4, keep_n=100)
+    # for key, vector in trigram_vectors.items():
+    #     data['tweet__contains_pos_trigram_{}'.format(re.sub(" ", "_", str(key)))] = vector
 
     # text/word length
     data['tweet__avg_word_length'] = data['tweet__tokenized_um_url_removed'].map(
@@ -95,78 +96,79 @@ def create_features(data):
     # data = data.drop('tweet__tokenized_um_url_removed', 1)
 
     data['tweet__nr_of_tokens'] = data['tweet__tokenized_text'].map(lambda x: len(NLPUtils.str_list_to_list(x)))
-    data['tweet__ratio_tokens_before_after_prepro'] = data.apply(
-        lambda x: tweet_ratio_tokens_before_after_prepro(NLPUtils.str_list_to_list(x['tweet__tokenized_text']),
-                                                         NLPUtils.str_list_to_list(
-                                                             x['tweet__additional_preprocessed_wo_stopwords'])), axis=1)
+    # TODO:
+    # data['tweet__ratio_tokens_before_after_prepro'] = data.apply(
+    #     lambda x: tweet_ratio_tokens_before_after_prepro(NLPUtils.str_list_to_list(x['tweet__tokenized_text']),
+    #                                                      NLPUtils.str_list_to_list(
+    #                                                          x['tweet__additional_preprocessed_wo_stopwords'])), axis=1)
 
     data['tweet__text_length'] = data.apply(
-        lambda row: get_tweet_text_length(row['tweet__text'], row['tweet__is_reply_to_status']), axis=1)
+        lambda row: get_tweet_text_length(row['text']), axis=1)
     data['tweet__percent_of_text_used'] = data['tweet__text_length'] / 140
     data['tweet__ratio_words_tokens'] = data['tweet__nr_of_words'] / data['tweet__nr_of_tokens']
 
     # url
-    data['tweet__nr_of_urls'] = data.apply(lambda x: tweet_nr_of_urls(x['tweet__entities_id'], x['tweet__text']),
-                                           axis=1)
-    data['tweet__contains_urls'] = data['tweet__nr_of_urls'].map(lambda x: x > 0)
-    data['tweet__avg_url_length'] = data.apply(
-        lambda x: tweet_avg_url_length(x['tweet__entities_id'], x['tweet__text']), axis=1)
-    data['tweet__url_only'] = (data['tweet__nr_of_urls'] > 0) & data['tweet__no_text']
+    # TODO:
+    # data['tweet__nr_of_urls'] = data.apply(lambda x: tweet_nr_of_urls(x['tweet__entities_id'], x['text']),
+    #                                        axis=1)
+    # data['tweet__contains_urls'] = data['tweet__nr_of_urls'].map(lambda x: x > 0)
+    # data['tweet__url_only'] = (data['tweet__nr_of_urls'] > 0) & data['tweet__no_text']
+    # data['tweet__avg_url_length'] = data.apply(
+    #     lambda x: tweet_avg_url_length(x['tweet__entities_id'], x['text']), axis=1)
 
     # stock symbol
-    data['tweet__contains_stock_symbol'] = data['tweet__text'].map(lambda x: bool(tweet_find_stock_mention(x)))
+    data['tweet__contains_stock_symbol'] = data['text'].map(lambda x: bool(tweet_find_stock_mention(x)))
 
     # punctuation
-    data['tweet__nr_of_punctuations'] = data['tweet__text'].map(
+    data['tweet__nr_of_punctuations'] = data['text'].map(
         lambda x: sum(get_nr_of_punctuation(x).values()))
     data['tweet__contains_punctuation'] = data['tweet__nr_of_punctuations'].map(lambda x: x > 0)
     data['tweet__ratio_punctuation_tokens'] = data.apply(
         lambda x: ratio_punctuation_tokens(x['tweet__tokenized_text'], x['tweet__nr_of_tokens']), axis=1)
-    data['tweet__nr_of_exclamation_marks'] = data['tweet__text'].map(
+    data['tweet__nr_of_exclamation_marks'] = data['text'].map(
         lambda x: get_nr_of_punctuation(x)['!'])
     data['tweet__contains_exclamation_mark'] = data['tweet__nr_of_exclamation_marks'].map(lambda x: x > 0)
     data['tweet__multiple_exclamation_marks'] = data['tweet__nr_of_exclamation_marks'].map(lambda x: x > 1)
-    data['tweet__nr_of_question_marks'] = data['tweet__text'].map(
+    data['tweet__nr_of_question_marks'] = data['text'].map(
         lambda x: get_nr_of_punctuation(x)['?'])
     data['tweet__contains_question_mark'] = data['tweet__nr_of_question_marks'].map(lambda x: x > 0)
     data['tweet__multiple_question_marks'] = data['tweet__nr_of_question_marks'].map(lambda x: x > 1)
 
     # further NLP
 
-    data['tweet__contains_character_repetitions'] = data['tweet__text'].map(
+    data['tweet__contains_character_repetitions'] = data['text'].map(
         lambda x: tweet_contains_character_repetitions(x))
     data['tweet__contains_slang'] = data['tweet__nr_of_slang_words'].map(
         lambda x: 0 < x)
 
-    data['tweet__is_all_uppercase'] = data['tweet__text'].map(lambda x: is_upper(x))
-    data['tweet__contains_uppercase_text'] = data['tweet__text'].map(lambda x: contains_all_uppercase(x))
+    data['tweet__is_all_uppercase'] = data['text'].map(lambda x: is_upper(x))
+    data['tweet__contains_uppercase_text'] = data['text'].map(lambda x: contains_all_uppercase(x))
 
-    data['tweet__contains_number'] = data['tweet__additional_preprocessed_text'].map(
-        lambda x: contains_number(NLPUtils.str_list_to_list(x)))
-    data['tweet__contains_quote'] = data['tweet__text'].map(lambda x: contains_quote(x))
+    # TODO:
+    # data['tweet__contains_number'] = data['tweet__additional_preprocessed_text'].map(
+    #     lambda x: contains_number(NLPUtils.str_list_to_list(x)))
+    data['tweet__contains_quote'] = data['text'].map(lambda x: contains_quote(x))
     # data = data.drop('tweet__text', 1)
 
     # media
-    data['tweet__nr_of_medias'] = data['tweet__entities_id'].map(lambda x: tweet_nr_of_medias(x))
-    data['tweet__contains_media'] = data['tweet__nr_of_medias'].map(lambda x: x > 0)
+    # TODO:
+    # data['tweet__nr_of_medias'] = data['tweet__entities_id'].map(lambda x: tweet_nr_of_medias(x))
+    # data['tweet__contains_media'] = data['tweet__nr_of_medias'].map(lambda x: x > 0)
 
     # user mentions
-    data['tweet__nr_of_user_mentions'] = data['tweet__entities_id'].map(lambda x: tweet_nr_of_user_mentions(x))
-    data['tweet__contains_user_mention'] = data['tweet__nr_of_user_mentions'].map(lambda x: x > 0)
-
-    # hashtags
-    top_100_hashtags = db.get_most_popular_hashtags_across_users(100)
-
-    data['tweet__nr_of_hashtags'] = data['tweet__entities_id'].map(lambda x: tweet_nr_of_hashtags(x))
-    data['tweet__contains_hashtags'] = data['tweet__nr_of_hashtags'].map(lambda x: x > 0)
-    data['tweet__nr_of_popular_hashtag'] = data['tweet__entities_id'].map(
-        lambda x: tweet_nr_of_hashtags_in_popular_hashtags(x, top_100_hashtags))
-    data['tweet__contains_popular_hashtag'] = data['tweet__nr_of_popular_hashtag'].map(
-        lambda x: x > 0)
+    # TODO:
+    # data['tweet__nr_of_user_mentions'] = data['tweet__entities_id'].map(lambda x: tweet_nr_of_user_mentions(x))
+    # data['tweet__contains_user_mention'] = data['tweet__nr_of_user_mentions'].map(lambda x: x > 0)
 
 
-    data['tweet__additional_preprocessed_is_empty'] = data['tweet__additional_preprocessed_wo_stopwords'].map(
-        lambda x: len(NLPUtils.str_list_to_list(x)) == 0)
+    # TODO:
+    # data['tweet__nr_of_hashtags'] = data['tweet__entities_id'].map(lambda x: tweet_nr_of_hashtags(x))
+    # data['tweet__contains_hashtags'] = data['tweet__nr_of_hashtags'].map(lambda x: x > 0)
+
+
+    # TODO:
+    # data['tweet__additional_preprocessed_is_empty'] = data['tweet__additional_preprocessed_wo_stopwords'].map(
+    #     lambda x: len(NLPUtils.str_list_to_list(x)) == 0)
 
     # sentiment related
     data['tweet__contains_sentiment'] = data['tweet__sentiment_score'].map(lambda x: x != 0.5)
@@ -207,27 +209,27 @@ def create_features(data):
 
 
     # tf-idf features
-    tweet_model = TextModel()
-
-    tweet_model.init_corpus(
-        [NLPUtils.str_list_to_list(tweet) for tweet in data['tweet__additional_preprocessed_wo_stopwords'].tolist()])
-    data['tweet__tf_idf_sum'] = tweet_model.get_tf_idf_series()
-
-    tweets_by_user = dict()
-    for index, row in data.iterrows():
-        user = row['user__id']
-        tweet = NLPUtils.str_list_to_list(row['tweet__additional_preprocessed_wo_stopwords'])
-        if user in tweets_by_user:
-            tweets_by_user[user].append(tweet)
-        else:
-            tweets_by_user[user] = [tweet]
-
-    user_idfs = TermWeighter.user_idfs(tweets_by_user)
-    data['tweet__tf_idf_sum_grouped_by_user'] = data.apply(
-        lambda x: TermWeighter.tweet_tf_idf_sum(
-            NLPUtils.str_list_to_list(x['tweet__additional_preprocessed_wo_stopwords']), user_idfs[x['user__id']]),
-        axis=1)
-    del tweets_by_user
+    # tweet_model = TextModel()
+    #
+    # tweet_model.init_corpus(
+    #     [NLPUtils.str_list_to_list(tweet) for tweet in data['tweet__additional_preprocessed_wo_stopwords'].tolist()])
+    # data['tweet__tf_idf_sum'] = tweet_model.get_tf_idf_series()
+    #
+    # tweets_by_user = dict()
+    # for index, row in data.iterrows():
+    #     user = row['user__id']
+    #     tweet = NLPUtils.str_list_to_list(row['tweet__additional_preprocessed_wo_stopwords'])
+    #     if user in tweets_by_user:
+    #         tweets_by_user[user].append(tweet)
+    #     else:
+    #         tweets_by_user[user] = [tweet]
+    #
+    # user_idfs = TermWeighter.user_idfs(tweets_by_user)
+    # data['tweet__tf_idf_sum_grouped_by_user'] = data.apply(
+    #     lambda x: TermWeighter.tweet_tf_idf_sum(
+    #         NLPUtils.str_list_to_list(x['tweet__additional_preprocessed_wo_stopwords']), user_idfs[x['user__id']]),
+    #     axis=1)
+    # del tweets_by_user
 
     # # bag-of-words unigram
     # if 'uni' in conf['text_models']:
@@ -278,13 +280,13 @@ def create_features(data):
     #     DataHandler.store_data(data)
 
     # bag-of-words bigram
-    print("tweet bag-of-words bigram")
-    bigram_model = TextModel()
-    tmp = data['tweet__additional_preprocessed_text'].tolist()
-    bigram_tweets = [NLPUtils.generate_n_grams(NLPUtils.str_list_to_list(tweet), 2) for tweet in tmp]
-    bigram_model.init_corpus(bigram_tweets)
-
-    data['tweet__bigram_tf_idf_sum'] = bigram_model.get_tf_idf_series()
+    # print("tweet bag-of-words bigram")
+    # bigram_model = TextModel()
+    # tmp = data['tweet__additional_preprocessed_text'].tolist()
+    # bigram_tweets = [NLPUtils.generate_n_grams(NLPUtils.str_list_to_list(tweet), 2) for tweet in tmp]
+    # bigram_model.init_corpus(bigram_tweets)
+    #
+    # data['tweet__bigram_tf_idf_sum'] = bigram_model.get_tf_idf_series()
 
     # if 'bi' in conf['text_models']:
     #     term_vectors = bigram_model.build_bag_of_words(min_doc_frequency=conf['bi']['min_doc_freq'],
@@ -345,7 +347,7 @@ def find_frequent_pos_trigrams(data, min_doc_frequency=10000, no_above=0.5, keep
     :return: 
     """
 
-    tweets_tags = data['tweet__pos_tags'].tolist()
+    tweets_tags = data['pos_tags'].tolist()
 
     trigram_pos = []
     for tweet in tweets_tags:
@@ -602,18 +604,12 @@ def get_top_level_domain_type(tld):
         return 0
 
 
-def get_tweet_text_length(text, quoted):
+def get_tweet_text_length(text):
     t = str(text)
     t = TextPreprocessor.unescape_html(t)
     norm_text = TextParser.normalize(t)
     length = len(norm_text)
 
-    # user mentions in quoted tweets do not count
-    if quoted == 1:
-        ums = TextParser.find_all_user_mentions(t)
-        for um in ums:
-            norm = TextParser.normalize(um)
-            length -= len(norm)
     return length
 
 
@@ -884,7 +880,8 @@ def get_tag_ratio(tagged_text, tag, nr_of_words):
     """returns the ratio of tokens with a specific tag.
     tag: N: Noun, A: Adjective, V: Verb"""
 
-    tagged = json.loads(tagged_text)
+    # tagged = json.loads(tagged_text)
+    tagged = tagged_text
     a_count = 0
     for t in tagged:
         if t['tag'] == tag:
@@ -1041,7 +1038,7 @@ def tweet_ratio_sentiment_words(pos_neg, nr_sent_words):
 
 
 if __name__ == "__main__":
-    df = pd.read_parquet('likes.parquet.gzip')
+    df = pd.read_parquet('almost.parquet.gzip')
     create_features(df)
 
 

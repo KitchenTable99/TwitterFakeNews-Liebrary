@@ -6,7 +6,7 @@ import pandas as pd
 
 from Learning.LearningMain import perform_x_val
 from Learning.LearningUtils import get_base_learners
-from NLP.NLPUtils import NLPUtils
+from NLPUtils import NLPUtils
 from TextRepresentation.TextModel import TextModel
 from Utility.CSVUtils import load_data_from_CSV, save_df_as_csv
 from Utility.TimeUtils import TimeUtils

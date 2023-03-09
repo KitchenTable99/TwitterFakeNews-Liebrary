@@ -1,18 +1,22 @@
-import json
 import pandas as pd
-import sys
+from tqdm import tqdm
 from collections import Counter
-from nltk import TweetTokenizer, sent_tokenize
+from nltk import TweetTokenizer, sent_tokenize, pos_tag
 from Emoji import Emojis
 from NLPUtils import NLPUtils
-from SentimentAnalysis import SentimentAnalysis
+# from SentimentAnalysis import SentimentAnalysis
 from TextPreprocessor import TextPreprocessor
 
 off_abbrevs = NLPUtils.get_official_abbreviations()
 sl_abbrevs = NLPUtils.get_slang_abbreviations()
 curr_thread_nr = Counter()
+tqdm.pandas()
 
-# TODO: add pos tags
+
+def insert_pos_tags(data: pd.DataFrame):
+    pos_list = data['tweet__tokenized_text'].apply(pos_tag)
+    pos_dicts = [[{'token': tup[0], 'tag': tup[1]} for tup in tup_list] for tup_list in pos_list]
+    df['pos_tags'] = pos_dicts
 
 
 def insert_tokenized_tweets(data: pd.DataFrame):
@@ -23,11 +27,11 @@ def insert_tokenized_tweets(data: pd.DataFrame):
 
 def insert_sent_tokenized_tweets(data: pd.DataFrame):
     """sentence tokenizes a tweets text"""
-    data['tweet__sent_tokenized_text'] = data.apply(lambda row: sent_tokenize(TextPreprocessor.preprocess_for_sent_tokenize(row['text'], row['unicode_emojis'], row['ascii_emojis'])), axis=1)
+    data['tweet__sent_tokenized_text'] = data.apply(lambda row: sent_tokenize(TextPreprocessor.preprocess_for_sent_tokenize(row['text'], row['tweet__unicode_emojis'], row['tweet__ascii_emojis'])), axis=1)
 
 
 def insert_additional_preprocessed_text(data: pd.DataFrame):
-    additional, spelling = data['pos_tags'].apply(lambda x: TextPreprocessor.additional_text_preprocessing_with_pos(json.loads(x)))
+    additional, spelling = data['pos_tags'].apply(lambda x: TextPreprocessor.additional_text_preprocessing_with_pos(x))
     data['tweet__additional_preprocessed_text'] = additional
     data['tweet__contains_spelling_mistake'] = spelling
 
@@ -56,34 +60,22 @@ def insert_additional_preprocessed_text_wo_stopwords(data: pd.DataFrame):
 
 
 if __name__ == "__main__":
-    # run from command line to use various threads
-    bin = None
-    if sys.argv[1:]:
-        bin = sys.argv[1]
+    df = pd.read_parquet('likes.parquet.gzip')
+    insert_tokenized_tweets(df)
+    insert_pos_tags(df)
 
-    testset=True
+    parse_ascii_emojis_into_db(df)
+    parse_unicode_emojis_into_db(df)
 
-    # Shows which of the preprocessing columns have not yet been completed
-    # db.preprocessing_values_missing(testset)
-    # db.clear_column(tablename="tweet", columnname="tokenized_text")
-
-    # parse_ascii_emojis_into_db(testset, bin)
-    # parse_unicode_emojis_into_db(testset, bin)
-    #
-    # insert_tokenized_tweets(testset, bin)
-    # insert_sent_tokenized_tweets(testset, bin)
+    insert_sent_tokenized_tweets(df)
+    df.to_parquet('almost.parquet.gzip', compression='gzip', index=False)
 
     # based on POS-tags:
-    # insert_contains_spelling_mistake(testset, bin)
-    # insert_additional_preprocessed_text(testset, bin)
-    # insert_additional_preprocessed_text_wo_stopwords(testset, bin)
-    #
+    # insert_additional_preprocessed_text(df)
+    # insert_additional_preprocessed_text_wo_stopwords(df)
+
     # SentimentAnalysis.insert_sentiment_scores(testset)
     # SentimentAnalysis.insert_polarity_score(testset)
-    SentimentAnalysis.insert_nr_pos_neg_words(testset=False)
-    #
-    # insert_is_trending_topic(testset)
-    # insert_is_local_trending_topic()
+    # SentimentAnalysis.insert_nr_pos_neg_words(testset=False)
 
     # replace_emoji_in_ascii_emojis()
-    #
