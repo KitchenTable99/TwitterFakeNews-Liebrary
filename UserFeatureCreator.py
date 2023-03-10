@@ -2,14 +2,13 @@ import pandas as pd
 from typing import Optional, Dict
 import logging
 
-from FeatureEngineering.FeatureCreator import contains_hashtag, contains_user_mention, contains_url, string_length, \
+from FeatureCreator import contains_hashtag, contains_user_mention, contains_url, string_length, \
     get_avg_user_mentions_per_tweet, get_avg_hashtags_per_tweet, get_avg_urls_per_tweet, \
     get_avg_post_time, get_tweets_per_day, get_minimum_time_between_tweets, \
     get_maximum_time_between_tweets, get_median_time_between_tweets, get_avg_time_between_tweets, \
     get_nr_of_retweets_per_tweet, get_nr_of_quotes_per_tweet, get_nr_of_replies_per_tweet, \
     get_user_lang_counts, get_percent_with_url, get_percent_with_hashtag, get_percent_with_user_mention, \
     get_nr_of_retweets_by_user, get_nr_of_quotes_by_user, get_nr_of_replies_by_user
-from Utility.TimeUtils import TimeUtils
 
 
 def create_user_features(user_df: pd.DataFrame, feature_df: Optional[pd.DataFrame] = None):
@@ -108,10 +107,6 @@ def friends_per_favourite(x):
         return x['friends_count'] / x['favourites_count']
 
 
-def user__has_default_profile_after_two_month(u):
-    return TimeUtils.month_ago(u['created_at']) >= 2 and u['default_profile_image']
-
-
 def user__has_location(loc):
     logging.info(f'{loc = }')
     if loc is None:
@@ -130,8 +125,8 @@ def main():
     
     user_features = create_user_features(user_df)
     user_features.to_parquet('user_features2.parquet.gzip', compression='gzip', index=False)
-    # depth_df = pd.read_parquet('fifthf.parquet.gzip')
-    # get_depth2_tweet_features(depth_df)
+    depth_df = pd.read_parquet('fifthf.parquet.gzip')
+    get_depth2_tweet_features(depth_df)
     
 
 

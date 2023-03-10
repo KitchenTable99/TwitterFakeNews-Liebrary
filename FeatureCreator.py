@@ -11,13 +11,11 @@ from nltk import ngrams
 
 from Emoji import Emojis
 from NLPUtils import NLPUtils
-from TermWeighter import TermWeighter
 from TextParser import TextParser
 from TextPreprocessor import TextPreprocessor
 
 # from TextModel import TextModel
 
-from TimeUtils import TimeUtils
 from UrlUtils import UrlUtils
 
 punctuation = NLPUtils.get_punctuation()
