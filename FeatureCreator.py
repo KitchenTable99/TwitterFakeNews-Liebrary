@@ -144,8 +144,8 @@ def create_features(data):
 
     # user mentions
     # TODO:
-    # data['tweet__nr_of_user_mentions'] = data['tweet__entities_id'].map(lambda x: tweet_nr_of_user_mentions(x))
-    # data['tweet__contains_user_mention'] = data['tweet__nr_of_user_mentions'].map(lambda x: x > 0)
+    data['tweet__nr_of_user_mentions'] = data.apply(lambda x: tweet_nr_of_user_mentions(x), axis=1)
+    data['tweet__contains_user_mention'] = data['tweet__nr_of_user_mentions'].map(lambda x: x > 0)
 
 
     # TODO:
@@ -487,14 +487,9 @@ def tweet_contains_user_mention(entity_id):
     return False
 
 
-def tweet_nr_of_user_mentions(entity_id):
-    if pd.isnull(entity_id):
-        return 0
-    else:
-        um = db.get_user_mentions(entity_id)
-        if um is not None:
-            return len(um)
-    return 0
+def tweet_nr_of_user_mentions(row):
+    mentions = row['mentions']
+    return len(ast.literal_eval(mentions) if mentions else [])
 
 
 def tweet_avg_url_length(row):
