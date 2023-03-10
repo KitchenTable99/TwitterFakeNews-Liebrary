@@ -52,9 +52,6 @@ def create_features(data):
     data['tweet__tokenized_um_url_removed'] = data['tweet__tokenized_text'].map(
         lambda x: remove_um_url(NLPUtils.str_list_to_list(x)))
 
-    # TODO:
-    # data['tweet__has_place'] = ~(pd.isnull(data['tweet__place_id']))
-    # data['tweet__has_location'] = ~(pd.isnull(data['tweet__location_id']))
     data['tweet__possibly_sensitive_news'] = data['possibly_sensitive'].map(lambda x: get_possibly_sensitive(x))
     data['tweet__no_text'] = data['tweet__tokenized_um_url_removed'].map(
         lambda x: len(NLPUtils.str_list_to_list(x)) == 0)
@@ -151,9 +148,7 @@ def create_features(data):
     # data = data.drop('tweet__text', 1)
 
     # media
-    # TODO:
-    # data['tweet__nr_of_medias'] = data['tweet__entities_id'].map(lambda x: tweet_nr_of_medias(x))
-    # data['tweet__contains_media'] = data['tweet__nr_of_medias'].map(lambda x: x > 0)
+    # these columns are taken care of while cleaning
 
     # user mentions
     # TODO:
