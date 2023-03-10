@@ -1,4 +1,4 @@
-import json
+import pandas as pd
 import re
 
 from nltk import TabTokenizer
@@ -6,7 +6,7 @@ from nltk.corpus import sentiwordnet as swn
 from nltk.wsd import lesk
 from textblob import TextBlob
 
-from Emoji import Emojis
+from Emoji import Emojis, NLPUtils
 
 
 class SentimentAnalysis:
@@ -23,29 +23,34 @@ class SentimentAnalysis:
         :return: sentiment score (pos_score - neg_score)
         """
         from TextPreprocessor import TextPreprocessor
-        allowed_tags = ['a','n','v','r']
         pos_tag = pos_tag.lower()
-        if pos_tag in allowed_tags:
+        is_adjective = 'jj' in pos_tag
+        is_verb = 'vb' in pos_tag
+        is_noun = 'nn' in pos_tag
+        is_adverb = 'rb' in pos_tag
+        allowed = is_adjective or is_verb or is_noun or is_adverb
+        if allowed:
             word = TextPreprocessor.lemmatize(word, pos_tag)
             synset = SentimentAnalysis.disambiguate_word(word, pos_tag, tweet_pos)
             if synset is None:
-                return 0.0
-            sent_word = swn.senti_synset(synset.name())
-            score = sent_word.pos_score()-sent_word.neg_score()
-            # print(sent_word)
-            # print("pos: {}".format(sent_word.pos_score()))
-            # print("neg: {}".format(sent_word.neg_score()))
-            # print("obj: {}".format(sent_word.obj_score()))
-            # print("score: {}".format(score))
-            return score
+                to_return = 0.0
+                # print('synset was None')
+            else:
+                sent_word = swn.senti_synset(synset.name())
+                to_return = sent_word.pos_score()-sent_word.neg_score()
+                # print('found_score in synset')
         elif re.match("U\+.{4,5}", word):
             # scores the unicode emojis
-            if pos_tag == 'e':
-                return SentimentAnalysis.EMOJI_SENTS[word]['score']
+            # print('scoring unicode emoji')
+            to_return = SentimentAnalysis.EMOJI_SENTS[word]['score']
         elif word in SentimentAnalysis.EMOJI_SENTS_ASCII:
-            return SentimentAnalysis.EMOJI_SENTS_ASCII[word]['score']
+            # print('scoring ascii emoji')
+            to_return = SentimentAnalysis.EMOJI_SENTS_ASCII[word]['score']
+        else:
+            # print('other token passed')
+            to_return = 0.
 
-        return 0.0
+        return to_return
 
     @staticmethod
     def disambiguate_word(word, tag, tweet_pos):
@@ -57,7 +62,8 @@ class SentimentAnalysis:
         :return: best matching Synset
         """
         sent = [key["token"] for key in tweet_pos]
-        return lesk(sent, word, tag)
+        wordnet_tag = NLPUtils.get_wordnet_pos(tag)
+        return lesk(sent, word, wordnet_tag)
 
     @staticmethod
     def score_tweet_sentiment(tweet_pos):
@@ -74,10 +80,10 @@ class SentimentAnalysis:
             score += score_t
             if score_t != 0:
                 nr_sent_words += 1
-        if nr_sent_words != 0:
-            return SentimentAnalysis.normalize_score(score/nr_sent_words), nr_sent_words
-        else:
-            return 0, 0
+        if score != 0:
+            score = SentimentAnalysis.normalize_score(score/nr_sent_words)
+
+        return score, nr_sent_words
 
     @staticmethod
     def count_pos_neg_sentiment_words(tweet_pos):
@@ -99,70 +105,24 @@ class SentimentAnalysis:
 
 
     @staticmethod
-    def insert_nr_pos_neg_words(testset):
-        print('Insert pos neg words')
-        tweets = DatabaseHandler.get_tweets_without_feature(null_feature="nr_pos_sentiment_words", select_feature="pos_tags", new_only=True, testset=testset)
-
-        insert_collection = list()
-
-        feature_names = ['nr_pos_sentiment_words','nr_neg_sentiment_words']
-        types = ['INT','INT']
-
-        count = 0
-        length = len(tweets)
-        for t in tweets:
-            count += 1
-
-            id = t["key_id"]
-            try:
-                text = json.loads(t["pos_tags"])
-
-                pos_count, neg_count = SentimentAnalysis.count_pos_neg_sentiment_words(text)
-                insert_collection.append((pos_count, neg_count, id))
-            except:
-                pass
-
-            if count % 5000 == 0:
-                DatabaseHandler.insert_tweet_features(feature_names=feature_names, values=insert_collection,
-                                                      sql_types=types)
-                insert_collection.clear()
-                print("{}/{} tweets processed.".format(count, length))
-        # insert residual
-        DatabaseHandler.insert_tweet_features(feature_names=feature_names, values=insert_collection, sql_types=types)
-        print("{}/{} tweets processed.".format(count, length))
+    def insert_nr_pos_neg_words(data: pd.DataFrame):
+        returned = data['pos_tags'].apply(SentimentAnalysis.count_pos_neg_sentiment_words)
+        n_pos, n_neg = zip(*returned.values)
+        data['tweet__nr_pos_sentiment_words'] = n_pos
+        data['tweet__nr_neg_sentiment_words'] = n_neg
 
 
     @staticmethod
-    def insert_sentiment_scores(testset):
+    def insert_sentiment_scores(data: pd.DataFrame):
         """
         inserts a column with the sentiment score as well as the number of sentiment words in the text
         :return: -
         """
-        print("Insert sentiment score")
-        tweets = DatabaseHandler.get_tweets_without_feature(null_feature="sentiment_score", select_feature="pos_tags", new_only=True, testset=testset)
+        returned = data['pos_tags'].apply(SentimentAnalysis.score_tweet_sentiment)
+        score, nr_sent_words = zip(*returned.values)
+        data['tweet__sentiment_score'] = score
+        data['tweet__nr_of_sentiment_words'] = nr_sent_words
 
-        insert_collection = list()
-
-        feature_names = ["sentiment_score", "nr_of_sentiment_words"]
-        types = ["FLOAT", "INT"]
-
-        count = 0
-        length = len(tweets)
-        for t in tweets:
-            count += 1
-
-            id = t["key_id"]
-            text = json.loads(t["pos_tags"])
-            score, nr_sent_words = SentimentAnalysis.score_tweet_sentiment(text)
-            insert_collection.append((score, nr_sent_words, id))
-
-            if count % 500 == 0:
-                DatabaseHandler.insert_tweet_features(feature_names=feature_names, values=insert_collection, sql_types=types)
-                insert_collection.clear()
-                print("{}/{} tweets processed.".format(count, length))
-        # insert residual
-        DatabaseHandler.insert_tweet_features(feature_names=feature_names, values=insert_collection, sql_types=types)
-        print("{}/{} tweets processed.".format(count, length))
 
     @staticmethod
     def assess_subjectivity(pos_tags):
@@ -172,55 +132,29 @@ class SentimentAnalysis:
         :return: 
         """
         from textblob.en.sentiments import PatternAnalyzer
-        from textblob.en.sentiments import NaiveBayesAnalyzer
         from NLPUtils import NLPUtils
         words = list()
         for token in pos_tags:
             word = token['token']
             pos_tag = token['tag']
-            allowed_tags = ['a','n','v','r']
-            if pos_tag.lower() in allowed_tags:
-                # word = TextPreprocessor.lemmatize(word, pos_tag.lower())
-                pass
-            Emojis.remove_unicode_emojis(word)
+            # allowed_tags = ['a','n','v','r']
+            # if pos_tag.lower() in allowed_tags:
+            #     word = TextPreprocessor.lemmatize(word, pos_tag.lower())
+            #     pass
+            word = Emojis.remove_unicode_emojis(word)
             # if pos_tag != '#' and pos_tag != '@' and pos_tag != 'U' and pos_tag != 'E' and word not in NLPUtils.get_punctuation():
             if pos_tag != '#' and pos_tag != '@' and pos_tag != 'U' and word not in NLPUtils.get_punctuation():
                 words.append(word)
         text = "\t".join(words)
-        # print(text)
         tokenizer = TabTokenizer()
         testimonial3 = TextBlob(text, analyzer=PatternAnalyzer(), tokenizer=tokenizer)
-        # print(testimonial3.sentiment)
-        polarity = SentimentAnalysis.normalize_score(testimonial3.sentiment.polarity)
         subjectivity = testimonial3.sentiment.subjectivity
-        return polarity, subjectivity
+        return subjectivity
 
     @staticmethod
-    def insert_polarity_score(testset):
+    def insert_subjectivity_score(data: pd.DataFrame):
         """insert polarity"""
-        print("Insert subjectivity score")
-        tweets = DatabaseHandler.get_tweets_without_feature(null_feature="subjectivity_score", select_feature="pos_tags", new_only=True, testset=testset)
-
-        insert_collection = list()
-        count = 0
-        length = len(tweets)
-        for t in tweets:
-            count += 1
-
-            id = t["key_id"]
-            text = json.loads(t["pos_tags"])
-            polarity, subjectivity = SentimentAnalysis.assess_subjectivity(text)
-            insert_collection.append((subjectivity, id))
-
-            if count % 500 == 0:
-                DatabaseHandler.insert_tweet_feature(None, feature_name="subjectivity_score", value=insert_collection,
-                                                      sql_type="FLOAT")
-                insert_collection.clear()
-                print("{}/{} tweets processed.".format(count, length))
-        # insert residual
-        DatabaseHandler.insert_tweet_feature(None, feature_name="subjectivity_score", value=insert_collection,
-                                             sql_type="FLOAT")
-        print("{}/{} tweets processed.".format(count, length))
+        data['tweet__subjectivity_score'] = data['pos_tags'].apply(SentimentAnalysis.assess_subjectivity)
 
     @staticmethod
     def normalize_score(score):

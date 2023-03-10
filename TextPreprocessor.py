@@ -7,14 +7,14 @@ from nltk import PorterStemmer, WordNetLemmatizer
 
 from Emoji import Emojis
 from NLPUtils import NLPUtils
-# from SpellChecker import SpellChecker
+from SpellChecker import SpellChecker
 
 
 class TextPreprocessor:
     STEMMER = PorterStemmer()
     LEMMATIZER = WordNetLemmatizer()
     # comment in to use spell checker (requires Python 3.5 32-bit)
-    # SPELL_CHECKER = SpellChecker()
+    SPELL_CHECKER = SpellChecker()
     PUNCTUATION = NLPUtils.get_punctuation()
     STOPWORDS = NLPUtils.get_stopwords()
     # comment in to use ascii emojis (the emoji file path might need to be changed to the correct one (folder 'resources'))
@@ -31,8 +31,6 @@ class TextPreprocessor:
     def additional_text_preprocessing_with_pos(pos_dict):
         """performs additional text preprocessing based on the pos tagged text. Needs 32-bit Python,
         since no 64-bit Pyenchant version is available"""
-
-        tags_to_lemmatize = ['a', 'n', 'v', 'r']
 
         pos_dict = TextPreprocessor.find_named_entities(pos_dict)
         if pos_dict is None:
@@ -56,7 +54,7 @@ class TextPreprocessor:
                             i = TextPreprocessor.SPELL_CHECKER.correct(i, tag)
                             if i != before:
                                 contains_spelling_mistake = True
-                        if tag in tags_to_lemmatize:
+                        if NLPUtils.should_lemmatize(tag):
                             i = TextPreprocessor.lemmatize(i, tag)
                         i = TextPreprocessor.stem(i, tag)
                     # check again, since stemming, lemmatization or spelling correction can produce stopwords
@@ -203,7 +201,8 @@ class TextPreprocessor:
         """lemmatizes a token based on its POS-tag.
         Allowed values for pos_tag: a(adjective), n(noun), v(verb), r(adverb)"""
         lemmatizer = TextPreprocessor.LEMMATIZER
-        return lemmatizer.lemmatize(token, pos_tag)
+        wordnet_pos = NLPUtils.get_wordnet_pos(pos_tag)
+        return lemmatizer.lemmatize(token, wordnet_pos)
 
     @staticmethod
     def remove_rt(token):

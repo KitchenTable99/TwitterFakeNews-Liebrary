@@ -2,14 +2,13 @@ import ast
 import json
 import re
 import string
-import pandas as pd
 from collections import Counter
 from functools import lru_cache
 from nltk import ngrams
-from nltk.corpus import stopwords
+from nltk.corpus import stopwords, wordnet
 from nltk.tokenize import sent_tokenize
+from textblob.utils import tree2str
 from TextParser import TextParser
-import os
 
 
 def get_root_directory():
@@ -51,7 +50,10 @@ class NLPUtils:
     def unicode_to_character(uni):
         """converts conicode in format U+XXXX to a character"""
         # try:
-        return chr(int(uni.replace('U+','').lower(),16))
+        if ' ' not in uni:
+            return chr(int(uni.replace('U+','').lower(),16))
+        else:
+            return ''.join(NLPUtils.unicode_to_character(unicode_char) for unicode_char in uni.split(' '))
         # except ValueError:
         #     uni.replace('U+', '')
 
@@ -110,5 +112,24 @@ class NLPUtils:
             tokens = NLPUtils.str_list_to_list(t)
             upper.extend(TextParser.find_all_upercase_tokens(tokens))
         return Counter(upper).most_common()
+
+    @staticmethod
+    def should_lemmatize(pos_tag):
+        return NLPUtils.get_wordnet_pos(pos_tag) != ''
+
+    @staticmethod
+    def get_wordnet_pos(treebank_tag):
+        treebank_tag = treebank_tag.lower()
+        if 'jj' in treebank_tag:
+            return wordnet.ADJ
+        elif 'vb' in treebank_tag:
+            return wordnet.VERB
+        elif 'nn' in treebank_tag:
+            return wordnet.NOUN
+        elif 'rb' in treebank_tag:
+            return wordnet.ADV
+        else:
+            print(f'asked for a non known tag: {treebank_tag}')
+            return ''
 
 

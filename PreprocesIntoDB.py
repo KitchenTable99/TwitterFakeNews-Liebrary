@@ -4,7 +4,7 @@ from collections import Counter
 from nltk import TweetTokenizer, sent_tokenize, pos_tag
 from Emoji import Emojis
 from NLPUtils import NLPUtils
-# from SentimentAnalysis import SentimentAnalysis
+from SentimentAnalysis import SentimentAnalysis
 from TextPreprocessor import TextPreprocessor
 
 off_abbrevs = NLPUtils.get_official_abbreviations()
@@ -31,7 +31,8 @@ def insert_sent_tokenized_tweets(data: pd.DataFrame):
 
 
 def insert_additional_preprocessed_text(data: pd.DataFrame):
-    additional, spelling = data['pos_tags'].apply(lambda x: TextPreprocessor.additional_text_preprocessing_with_pos(x))
+    results = data['pos_tags'].apply(lambda x: TextPreprocessor.additional_text_preprocessing_with_pos(x))
+    additional, spelling = zip(*results)
     data['tweet__additional_preprocessed_text'] = additional
     data['tweet__contains_spelling_mistake'] = spelling
 
@@ -68,14 +69,17 @@ if __name__ == "__main__":
     parse_unicode_emojis_into_db(df)
 
     insert_sent_tokenized_tweets(df)
+
+    SentimentAnalysis.insert_sentiment_scores(df)
+    SentimentAnalysis.insert_nr_pos_neg_words(df)
+    SentimentAnalysis.insert_subjectivity_score(df)
+
+    # df = pd.read_parquet('almost.parquet.gzip')
+    # based on POS-tags:
+    insert_additional_preprocessed_text(df)
+    insert_additional_preprocessed_text_wo_stopwords(df)
     df.to_parquet('almost.parquet.gzip', compression='gzip', index=False)
 
-    # based on POS-tags:
-    # insert_additional_preprocessed_text(df)
-    # insert_additional_preprocessed_text_wo_stopwords(df)
 
-    # SentimentAnalysis.insert_sentiment_scores(testset)
-    # SentimentAnalysis.insert_polarity_score(testset)
-    # SentimentAnalysis.insert_nr_pos_neg_words(testset=False)
 
     # replace_emoji_in_ascii_emojis()
