@@ -1,4 +1,5 @@
 import json
+import ast
 from collections import Counter
 import numpy as np
 from collections import Counter
@@ -93,11 +94,6 @@ def create_features(data):
     # data = data.drop('tweet__tokenized_um_url_removed', 1)
 
     data['tweet__nr_of_tokens'] = data['tweet__tokenized_text'].map(lambda x: len(NLPUtils.str_list_to_list(x)))
-    # TODO:
-    # data['tweet__ratio_tokens_before_after_prepro'] = data.apply(
-    #     lambda x: tweet_ratio_tokens_before_after_prepro(NLPUtils.str_list_to_list(x['tweet__tokenized_text']),
-    #                                                      NLPUtils.str_list_to_list(
-    #                                                          x['tweet__additional_preprocessed_wo_stopwords'])), axis=1)
 
     data['tweet__text_length'] = data.apply(
         lambda row: get_tweet_text_length(row['text']), axis=1)
@@ -105,13 +101,9 @@ def create_features(data):
     data['tweet__ratio_words_tokens'] = data['tweet__nr_of_words'] / data['tweet__nr_of_tokens']
 
     # url
-    # TODO:
-    # data['tweet__nr_of_urls'] = data.apply(lambda x: tweet_nr_of_urls(x['tweet__entities_id'], x['text']),
-    #                                        axis=1)
-    # data['tweet__contains_urls'] = data['tweet__nr_of_urls'].map(lambda x: x > 0)
-    # data['tweet__url_only'] = (data['tweet__nr_of_urls'] > 0) & data['tweet__no_text']
-    # data['tweet__avg_url_length'] = data.apply(
-    #     lambda x: tweet_avg_url_length(x['tweet__entities_id'], x['text']), axis=1)
+    data['tweet__nr_of_urls'] = data.apply(lambda row: tweet_nr_of_urls(row), axis=1)
+    data['tweet__contains_urls'] = data['tweet__nr_of_urls'].map(lambda x: x > 0)
+    data['tweet__avg_url_length'] = data.apply(lambda row: tweet_avg_url_length(row), axis=1)
 
     # stock symbol
     data['tweet__contains_stock_symbol'] = data['text'].map(lambda x: bool(tweet_find_stock_mention(x)))
@@ -444,17 +436,15 @@ def tweet_nr_of_hashtags(entity_id):
             return 0
 
 
-def tweet_nr_of_urls(entity_id, text):
-    if pd.isnull(entity_id):
-        return 0
-    else:
-        length_1 = len(TextParser.find_all_urls(str(text)))
-        length_2 = len(db.get_urls_of_tweet(entity_id))
+def tweet_nr_of_urls(row):
+    length_1 = len(TextParser.find_all_urls(row['text']))
+    urls = row['urls']
+    length_2 = len(ast.literal_eval(urls) if urls else [])
 
-        if length_1 > length_2:
-            return length_1
-        else:
-            return length_2
+    if length_1 > length_2:
+        return length_1
+    else:
+        return length_2
 
 
 def tweet_contains_urls(entity_id, text):
@@ -507,30 +497,28 @@ def tweet_nr_of_user_mentions(entity_id):
     return 0
 
 
-def tweet_avg_url_length(entity_id, text):
+def tweet_avg_url_length(row):
     """returns the length of an url in a tweet.
     If tweet contains more than one url, average length is returned"""
-    if pd.isnull(entity_id):
+    parsed_urls = TextParser.find_all_urls(row['text'])
+    urls = row['urls']
+    urls_from_tweepy = ast.literal_eval(urls) if urls else []
+
+    length_1 = len(parsed_urls) # this gives the number of urls
+    length_2 = len(urls_from_tweepy)
+
+    if length_1 == 0 and length_2 == 0:
         return 0
+    elif length_1 > length_2:
+        sum = 0
+        for i in parsed_urls:
+            sum += len(i)
+        return sum / len(parsed_urls)
     else:
-        parsed_urls = TextParser.find_all_urls(str(text))
-        urls_from_tweepy = db.get_urls_of_tweet(entity_id)
-
-        length_1 = len(parsed_urls)
-        length_2 = len(urls_from_tweepy)
-
-        if length_1 == 0 and length_2 == 0:
-            return 0
-        elif length_1 > length_2:
-            sum = 0
-            for i in parsed_urls:
-                sum += len(i)
-            return sum / len(parsed_urls)
-        else:
-            sum = 0
-            for i in urls_from_tweepy:
-                sum += len(i)
-            return sum / len(urls_from_tweepy)
+        sum = 0
+        for i in urls_from_tweepy:
+            sum += len(i)
+        return sum / len(urls_from_tweepy)
 
 
 def tweet_contains_link_to_users_website(user_url, entities_id):
@@ -1033,7 +1021,7 @@ def tweet_ratio_sentiment_words(pos_neg, nr_sent_words):
 
 
 if __name__ == "__main__":
-    df = pd.read_parquet('almost.parquet.gzip')
-    create_features(df)
+    almost = pd.read_parquet('almost.parquet.gzip')
+    create_features(almost)
 
 
