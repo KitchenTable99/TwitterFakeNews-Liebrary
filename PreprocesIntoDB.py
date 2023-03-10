@@ -57,7 +57,7 @@ def insert_additional_preprocessed_text_wo_stopwords(data: pd.DataFrame):
     :return: 
     """
     stopwords = NLPUtils.get_stopwords()
-    data['tweet__additional_preprocessed_text_wo_stopwords'] = data['tweet__additional_preprocessed_text'].apply(lambda x: str([token for token in x if token not in stopwords]))
+    data['tweet__additional_preprocessed_wo_stopwords'] = data['tweet__additional_preprocessed_text'].apply(lambda x: str([token for token in x if token not in stopwords]))
 
 
 if __name__ == "__main__":

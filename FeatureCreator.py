@@ -133,9 +133,8 @@ def create_features(data):
     data['tweet__is_all_uppercase'] = data['text'].map(lambda x: is_upper(x))
     data['tweet__contains_uppercase_text'] = data['text'].map(lambda x: contains_all_uppercase(x))
 
-    # TODO:
-    # data['tweet__contains_number'] = data['tweet__additional_preprocessed_text'].map(
-    #     lambda x: contains_number(NLPUtils.str_list_to_list(x)))
+    data['tweet__contains_number'] = data['tweet__additional_preprocessed_text'].map(
+        lambda x: contains_number(NLPUtils.str_list_to_list(x)))
     data['tweet__contains_quote'] = data['text'].map(lambda x: contains_quote(x))
     # data = data.drop('tweet__text', 1)
 
@@ -143,14 +142,12 @@ def create_features(data):
     # these columns are taken care of while cleaning
 
     # user mentions
-    # TODO:
     data['tweet__nr_of_user_mentions'] = data.apply(lambda x: tweet_nr_of_user_mentions(x), axis=1)
     data['tweet__contains_user_mention'] = data['tweet__nr_of_user_mentions'].map(lambda x: x > 0)
 
 
-    # TODO:
-    # data['tweet__nr_of_hashtags'] = data['tweet__entities_id'].map(lambda x: tweet_nr_of_hashtags(x))
-    # data['tweet__contains_hashtags'] = data['tweet__nr_of_hashtags'].map(lambda x: x > 0)
+    data['tweet__nr_of_hashtags'] = data.apply(lambda row: tweet_nr_of_hashtags(row), axis=1)
+    data['tweet__contains_hashtags'] = data['tweet__nr_of_hashtags'].map(lambda x: x > 0)
 
 
     # TODO:
@@ -158,131 +155,24 @@ def create_features(data):
     #     lambda x: len(NLPUtils.str_list_to_list(x)) == 0)
 
     # sentiment related
-    data['tweet__contains_sentiment'] = data['tweet__sentiment_score'].map(lambda x: x != 0.5)
+    # BUG: changed to 0. instead 0.5
+    data['tweet__contains_sentiment'] = data['tweet__sentiment_score'].map(lambda x: x != 0.)
     data['tweet__ratio_pos_sentiment_words'] = data.apply(
         lambda x: tweet_ratio_sentiment_words(x['tweet__nr_pos_sentiment_words'], x['tweet__nr_of_sentiment_words']), axis=1)
     data['tweet__ratio_neg_sentiment_words'] = data.apply(
         lambda x: tweet_ratio_sentiment_words(x['tweet__nr_neg_sentiment_words'], x['tweet__nr_of_sentiment_words']), axis=1)
-
     data['tweet__ratio_stopwords'] = data.apply(lambda x: tweet_ratio_tokens_before_after_prepro(
         NLPUtils.str_list_to_list(x['tweet__additional_preprocessed_text']),
         NLPUtils.str_list_to_list(x['tweet__additional_preprocessed_wo_stopwords'])), axis=1)
 
     # time features
-    data['tweet__day_of_week'] = data['tweet__created_at'].map(
-        lambda x: int(TimeUtils.mysql_to_python_datetime(x).weekday()))
-    # DataHandler.store_data(data)
-
-    data['tweet__day_of_month'] = data['tweet__created_at'].map(lambda x: TimeUtils.mysql_to_python_datetime(x).day)
-    data['tweet__day_of_year'] = data['tweet__created_at'].map(
-        lambda x: TimeUtils.mysql_to_python_datetime(x).timetuple().tm_yday)
-    data['tweet__month_of_year'] = data['tweet__created_at'].map(lambda x: TimeUtils.mysql_to_python_datetime(x).month)
-    data['tweet__year'] = data['tweet__created_at'].map(lambda x: TimeUtils.mysql_to_python_datetime(x).year)
-    data['tweet__am_pm'] = data.apply(
-        lambda x: TimeUtils.is_pm(TimeUtils.mysql_to_python_datetime(x['tweet__created_at']), x['user__utc_offset']),
-        axis=1)
-    data['tweet__hour_of_day'] = data.apply(
-        lambda x: TimeUtils.hour_of_day(TimeUtils.mysql_to_python_datetime(x['tweet__created_at']),
-                                        x['user__utc_offset']),
-        axis=1)
-    data['tweet__quarter_of_year'] = data['tweet__month_of_year'].map(lambda x: tweet_quarter(x))
-
-    # relative
-    data['tweet__created_days_ago'] = data['tweet__created_at'].map(
-        lambda x: TimeUtils.days_ago(TimeUtils.mysql_to_python_datetime(x), relative_to="2017-07-24 16:01"))
-    # absolute
-    # data['tweet__created_days_ago'] = data['tweet__created_at'].map(
-    #     lambda x: TimeUtils.days_ago(TimeUtils.mysql_to_python_datetime(x), relative_to="2017-07-24 16:01"))
-
-
-    # tf-idf features
-    # tweet_model = TextModel()
-    #
-    # tweet_model.init_corpus(
-    #     [NLPUtils.str_list_to_list(tweet) for tweet in data['tweet__additional_preprocessed_wo_stopwords'].tolist()])
-    # data['tweet__tf_idf_sum'] = tweet_model.get_tf_idf_series()
-    #
-    # tweets_by_user = dict()
-    # for index, row in data.iterrows():
-    #     user = row['user__id']
-    #     tweet = NLPUtils.str_list_to_list(row['tweet__additional_preprocessed_wo_stopwords'])
-    #     if user in tweets_by_user:
-    #         tweets_by_user[user].append(tweet)
-    #     else:
-    #         tweets_by_user[user] = [tweet]
-    #
-    # user_idfs = TermWeighter.user_idfs(tweets_by_user)
-    # data['tweet__tf_idf_sum_grouped_by_user'] = data.apply(
-    #     lambda x: TermWeighter.tweet_tf_idf_sum(
-    #         NLPUtils.str_list_to_list(x['tweet__additional_preprocessed_wo_stopwords']), user_idfs[x['user__id']]),
+    data['tweet__day_of_week'] = data['created_at'].apply(lambda x: int(x.weekday()))
+    data['tweet__day_of_month'] = data['created_at'].apply(lambda x: int(x.day))
+    # TODO: get local time
+    # data['tweet__hour_of_day'] = data.apply(
+    #     lambda x: TimeUtils.hour_of_day(TimeUtils.mysql_to_python_datetime(x['tweet__created_at']),
+    #                                     x['user__utc_offset']),
     #     axis=1)
-    # del tweets_by_user
-
-    # # bag-of-words unigram
-    # if 'uni' in conf['text_models']:
-    #     del tweet_model
-    #     tweet_model = TextModel()
-    #     tweet_model.init_corpus([[token for token in NLPUtils.str_list_to_list(tweet) if
-    #                               token != "USERMENTION" and token != "URL" and not re.match('^\d+$', token)] for tweet
-    #                              in
-    #                              data['tweet__additional_preprocessed_wo_stopwords'].tolist()])
-    #
-    #     term_vectors = tweet_model.build_bag_of_words(variant='unigram', min_doc_frequency=conf['uni']['min_doc_freq'],
-    #                                                   no_above=conf['uni']['no_above'], keep_n=500)
-    #     for key, series in term_vectors.items():
-    #         data['tweet__contains_{}'.format(key)] = series
-    #
-    #     print(data.shape)
-
-    # # LDA topics
-    # if 'topic_model' in conf['text_models']:
-    #
-    #     print("tweet LDA topics...")
-    #     del tweet_model
-    #     tweet_model = TextModel()
-    #     tweet_model.init_corpus([[token for token in NLPUtils.str_list_to_list(tweet) if
-    #                               token != "USERMENTION" and token != "URL" and not re.match('^\d+$', token)] for tweet
-    #                              in
-    #                              data['tweet__additional_preprocessed_wo_stopwords'].tolist()])
-    #     if conf['topic_model']['lda']:
-    #         tweet_model.perform_lda(num_topics=conf['topic_model']['num_topics'])
-    #         df = tweet_model.get_topics_as_df()
-    #         data = pd.concat([data, df], axis=1)
-    #     else:
-    #         tweet_model.perform_hdp()
-    #         df = tweet_model.get_hdp_topics_as_df()
-    #         data = pd.concat([data, df], axis=1)
-
-    # print(data.shape)
-    # if 'doc2vec' in conf['text_models']:
-    #     X = data['tweet__additional_preprocessed_wo_stopwords'].tolist()
-    #     y = data['tweet__fake'].tolist()
-    #     doc2Vec = Doc2Vec(X, y, model_size=conf['doc2vec']['size'], dm=conf['doc2vec']['dm'],
-    #                       epochs=conf['doc2vec']['epochs'])
-    #     doc2Vec.build_model()
-    #     fv = doc2Vec.create_feature_vectors()
-    #     data = pd.concat([data, fv], axis=1)
-    #
-    #     data = data.drop('tweet__additional_preprocessed_wo_stopwords', 1)
-    #     DataHandler.store_data(data)
-
-    # bag-of-words bigram
-    # print("tweet bag-of-words bigram")
-    # bigram_model = TextModel()
-    # tmp = data['tweet__additional_preprocessed_text'].tolist()
-    # bigram_tweets = [NLPUtils.generate_n_grams(NLPUtils.str_list_to_list(tweet), 2) for tweet in tmp]
-    # bigram_model.init_corpus(bigram_tweets)
-    #
-    # data['tweet__bigram_tf_idf_sum'] = bigram_model.get_tf_idf_series()
-
-    # if 'bi' in conf['text_models']:
-    #     term_vectors = bigram_model.build_bag_of_words(min_doc_frequency=conf['bi']['min_doc_freq'],
-    #                                                    no_above=conf['bi']['no_above'], keep_n=500)
-    #     for key, vector in term_vectors.items():
-    #         data['tweet__contains_bigram_{}'.format(re.sub(" ", "_", str(key)))] = vector
-
-    # data = data.drop('tweet__additional_preprocessed_text', 1)
-    # DataHandler.store_data(data)
 
     return data
 
@@ -425,15 +315,9 @@ def tweet_contains_hashtags(entity_id):
             return False
 
 
-def tweet_nr_of_hashtags(entity_id):
-    if pd.isnull(entity_id):
-        return 0
-    else:
-        hashtags = db.get_hashtags_of_tweet(entity_id)
-        if hashtags is not None:
-            return len(hashtags)
-        else:
-            return 0
+def tweet_nr_of_hashtags(row):
+    hashtags = row['hashtags']
+    return len(ast.literal_eval(hashtags) if hashtags else [])
 
 
 def tweet_nr_of_urls(row):
@@ -1017,6 +901,7 @@ def tweet_ratio_sentiment_words(pos_neg, nr_sent_words):
 
 if __name__ == "__main__":
     almost = pd.read_parquet('almost.parquet.gzip')
-    create_features(almost)
+    done = create_features(almost)
+    done.to_parquet('done.parquet.gzip', compression='gzip', index=False)
 
 
