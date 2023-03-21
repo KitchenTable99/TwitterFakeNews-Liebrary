@@ -16,7 +16,7 @@ tqdm.pandas()
 def insert_pos_tags(data: pd.DataFrame):
     pos_list = data['tweet__tokenized_text'].apply(pos_tag)
     pos_dicts = [[{'token': tup[0], 'tag': tup[1]} for tup in tup_list] for tup_list in pos_list]
-    df['pos_tags'] = pos_dicts
+    data['pos_tags'] = pos_dicts
 
 
 def insert_tokenized_tweets(data: pd.DataFrame):
