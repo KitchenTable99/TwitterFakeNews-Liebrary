@@ -3,7 +3,8 @@ import logging
 import pickle
 import pandas as pd
 from tqdm import tqdm as progress
-from typing import Callable, Generator, List, Literal, Set, Tuple, TypeVar
+from typing import Callable, Generator, Literal, Set, TypeVar
+from PreprocesIntoDB import preprocess_df as preprocess_function
 
 from UserFeatureCreator import get_depth2_tweet_features as extract_depth_features
 
@@ -46,52 +47,27 @@ class TweetCrawler:
             yield callable(df)
 
 
-def get_ids(df: pd.DataFrame) -> Set[int]:
-    return set(df['id'].to_list())
-
-
-def get_count(df: pd.DataFrame) -> int:
-    return len(df['id'])
-
-
-def get_count_by_document(df: pd.DataFrame) -> pd.DataFrame:
-    df['day'] = pd.DatetimeIndex(df.created_at).normalize()
-    return df.groupby(['day']).count()
-
-
 def get_user_ids(df: pd.DataFrame) -> Set[int]:
     return set(df['author_id'].to_list())
 
 
-def get_retweets(df: pd.DataFrame) -> pd.DataFrame:
-    return df[df['tweet_type'] == 'retweet']
-
-
-def test():
-    left = TweetCrawler('left')
-    retweets = left.apply_function(get_user_ids)
-
-    for i in retweets:
-        print(i)
-
-
-def main():
-    left_crawler = TweetCrawler('harvard')
-    retweets = left_crawler.apply_function(get_retweets)
-    all_op_tweets = set()
-
-    for retweet_df in progress(retweets):
-        original_tweets = set(retweet_df['original_tweet_id'].to_list())
-        all_op_tweets.update(original_tweets)
-
-    with open('originals.txt', 'w') as fp:
-        for user_id in all_op_tweets:
-            fp.write(f'{user_id:.20f}')
-            fp.write('\n')
-
-
 def get_user_tweets(df):
     return df.groupby(['author_id'])
+
+
+def preprocess_likes():
+    left_crawler = TweetCrawler('likes')
+    tweets = left_crawler.apply_function(preprocess_function)
+
+    count = 0
+    for processed_df in tweets:
+        write_name = f'processed_likes_{count}'
+        count += 1
+
+        processed_df.to_parquet(write_name,
+                      index=False,
+                      compression='gzip')
+        
 
 
 def extract_depth_2():
@@ -125,37 +101,7 @@ def extract_depth_2():
         pickle.dump(all_depth_features, fp)
     all_depth_features.to_parquet('user_depth_features.parquet.gzip', compression='gzip', index=False)
 
-def likes():
-    likes_crawler = TweetCrawler('depth_2')
-    author_ids = likes_crawler.apply_function(get_user_ids)
-    fuckups = set()
-    seen = set()
-    for id_set in author_ids:
-        for id in id_set:
-            if id in seen:
-                fuckups.add(id)
-            else:
-                seen.add(id)
-
-    print(fuckups)
-    with open('fuckups.pickle', 'wb') as fp:
-        pickle.dump(fuckups, fp)
-
-    # with open('liked_user_ids.txt', 'w') as fp:
-    #     for user_id in total_ids:
-    #         fp.write(str(user_id))
-    #         fp.write('\n')
-
-    # likes_gb = likes_crawler.apply_function(get_count)
-    # count = 0
-    # for a in likes_gb:
-    #     count += a
-    # print(count)
-    # counts = pd.concat(list(likes_gb), axis=1).sum(axis=1)
-    # with open('counts.pickle', 'wb') as fp:
-    #     pickle.dump(counts, fp)
-
 
 if __name__ == "__main__":
     logging.basicConfig(filename='twetter_crawler.log', encoding='utf-8', level=logging.INFO, format='%(asctime)s - %(message)s')
-    extract_depth_2()
+    preprocess_likes()

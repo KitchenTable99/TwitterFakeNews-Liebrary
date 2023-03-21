@@ -60,6 +60,26 @@ def insert_additional_preprocessed_text_wo_stopwords(data: pd.DataFrame):
     data['tweet__additional_preprocessed_wo_stopwords'] = data['tweet__additional_preprocessed_text'].apply(lambda x: str([token for token in x if token not in stopwords]))
 
 
+def preprocess_df(df: pd.DataFrame) -> pd.DataFrame:
+    insert_tokenized_tweets(df)
+    insert_pos_tags(df)
+
+    parse_ascii_emojis_into_db(df)
+    parse_unicode_emojis_into_db(df)
+
+    insert_sent_tokenized_tweets(df)
+
+    SentimentAnalysis.insert_sentiment_scores(df)
+    SentimentAnalysis.insert_nr_pos_neg_words(df)
+    SentimentAnalysis.insert_subjectivity_score(df)
+
+    # df = pd.read_parquet('almost.parquet.gzip')
+    # based on POS-tags:
+    insert_additional_preprocessed_text(df)
+    insert_additional_preprocessed_text_wo_stopwords(df)
+    return df
+
+
 if __name__ == "__main__":
     df = pd.read_parquet('likes.parquet.gzip')
     insert_tokenized_tweets(df)
