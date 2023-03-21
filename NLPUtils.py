@@ -7,7 +7,6 @@ from functools import lru_cache
 from nltk import ngrams
 from nltk.corpus import stopwords, wordnet
 from nltk.tokenize import sent_tokenize
-from textblob.utils import tree2str
 from TextParser import TextParser
 
 
