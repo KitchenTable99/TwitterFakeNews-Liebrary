@@ -128,7 +128,7 @@ class NLPUtils:
         elif 'rb' in treebank_tag:
             return wordnet.ADV
         else:
-            print(f'asked for a non known tag: {treebank_tag}')
+            # print(f'asked for a non known tag: {treebank_tag}')
             return ''
 
 

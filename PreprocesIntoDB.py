@@ -6,6 +6,7 @@ from Emoji import Emojis
 from NLPUtils import NLPUtils
 from SentimentAnalysis import SentimentAnalysis
 from TextPreprocessor import TextPreprocessor
+from typing import Optional
 
 off_abbrevs = NLPUtils.get_official_abbreviations()
 sl_abbrevs = NLPUtils.get_slang_abbreviations()
@@ -27,7 +28,9 @@ def insert_tokenized_tweets(data: pd.DataFrame):
 
 def insert_sent_tokenized_tweets(data: pd.DataFrame):
     """sentence tokenizes a tweets text"""
-    data['tweet__sent_tokenized_text'] = data.apply(lambda row: sent_tokenize(TextPreprocessor.preprocess_for_sent_tokenize(row['text'], row['tweet__unicode_emojis'], row['tweet__ascii_emojis'])), axis=1)
+    preprocess_sent = data.apply(lambda row: TextPreprocessor.preprocess_for_sent_tokenize(row), axis=1)
+    tokens = preprocess_sent.apply(sent_tokenize)
+    data['tweet__nr_of_sentences'] = tokens.apply(lambda x: len(NLPUtils.str_list_to_list(x)))
 
 
 def insert_additional_preprocessed_text(data: pd.DataFrame):
@@ -60,7 +63,9 @@ def insert_additional_preprocessed_text_wo_stopwords(data: pd.DataFrame):
     data['tweet__additional_preprocessed_wo_stopwords'] = data['tweet__additional_preprocessed_text'].apply(lambda x: str([token for token in x if token not in stopwords]))
 
 
-def preprocess_df(df: pd.DataFrame) -> pd.DataFrame:
+def preprocess_df(df: pd.DataFrame) -> Optional[pd.DataFrame]:
+    if df.empty:
+        return None
     insert_tokenized_tweets(df)
     insert_pos_tags(df)
 

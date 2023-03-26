@@ -1,4 +1,5 @@
 import json
+import logging
 import ast
 from collections import Counter
 import numpy as np
@@ -44,7 +45,6 @@ def create_features(data):
             lambda x: Emojis.count_ascii_emojis(TextPreprocessor.remove_urls(x)))
     data['tweet__contains_ascii_emojis'] = data['tweet__nr_of_ascii_emojis'].map(lambda x: x > 0)
 
-    data['tweet__nr_of_sentences'] = data['tweet__sent_tokenized_text'].map(lambda x: len(NLPUtils.str_list_to_list(x)))
     # print("drop column tweet__ascii_emojis")
     # data = data.drop('tweet__ascii_emojis', 1)
 
@@ -315,6 +315,8 @@ def tweet_contains_hashtags(entity_id):
 
 def tweet_nr_of_hashtags(row):
     hashtags = row['hashtags']
+    if pd.isna(hashtags):
+        return 0
     return len(ast.literal_eval(hashtags) if hashtags else [])
 
 
@@ -371,7 +373,10 @@ def tweet_contains_user_mention(entity_id):
 
 def tweet_nr_of_user_mentions(row):
     mentions = row['mentions']
-    return len(ast.literal_eval(mentions) if mentions else [])
+    logging.debug(f'{mentions = }')
+    if pd.isna(mentions):
+        return 0
+    return len(json.loads(mentions) if mentions else [])
 
 
 def tweet_avg_url_length(row):

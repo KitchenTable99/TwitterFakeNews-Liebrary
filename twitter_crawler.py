@@ -1,4 +1,6 @@
 import glob
+import os
+from FeatureCreator import create_features
 import logging
 import pickle
 import pandas as pd
@@ -61,13 +63,31 @@ def preprocess_likes():
 
     count = 0
     for processed_df in tweets:
+        if processed_df is None:
+            continue
         write_name = f'processed_likes_{count}'
         count += 1
 
         processed_df.to_parquet(write_name,
-                      index=False,
-                      compression='gzip')
-        
+                                index=False,
+                                compression='gzip')
+
+
+def create_tweet_features():
+    files = os.listdir('./processed/')
+    for file in progress(files):
+        if os.path.exists(f'./real_processed/{file}'):
+            continue
+        file_path = f'./processed/{file}'
+        df = pd.read_parquet(file_path)
+        tweets = create_features(df)
+        if tweets is None:
+            return
+
+        tweets.to_parquet(f'./real_processed/{file}',
+                           index=False,
+                           compression='gzip')
+
 
 
 def extract_depth_2():
@@ -103,5 +123,5 @@ def extract_depth_2():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename='twetter_crawler.log', encoding='utf-8', level=logging.INFO, format='%(asctime)s - %(message)s')
-    preprocess_likes()
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+    create_tweet_features()

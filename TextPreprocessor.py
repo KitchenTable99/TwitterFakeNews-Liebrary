@@ -1,4 +1,5 @@
 import html
+import pandas as pd
 import json
 import re
 import requests
@@ -77,7 +78,8 @@ class TextPreprocessor:
         return text
 
     @staticmethod
-    def preprocess_for_sent_tokenize(text, unicode_emojis, ascii_emojis):
+    def preprocess_for_sent_tokenize(row: pd.Series):
+        text, unicode_emojis, ascii_emojis = row['text'], row['tweet__unicode_emojis'], row['tweet__ascii_emojis']
         text = TextPreprocessor.unescape_html(text)
         text = TextPreprocessor.remove_urls(text)
         # text = Emojis.remove_ascii_emojis(text, TextPreprocessor.ASCII_EMOJIS)
