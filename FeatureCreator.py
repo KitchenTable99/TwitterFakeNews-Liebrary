@@ -323,7 +323,10 @@ def tweet_nr_of_hashtags(row):
 def tweet_nr_of_urls(row):
     length_1 = len(TextParser.find_all_urls(row['text']))
     urls = row['urls']
-    length_2 = len(ast.literal_eval(urls) if urls else [])
+    if pd.isna(urls):
+        length_2 = 0
+    else:
+        length_2 = len(ast.literal_eval(urls) if urls else [])
 
     if length_1 > length_2:
         return length_1
@@ -384,7 +387,10 @@ def tweet_avg_url_length(row):
     If tweet contains more than one url, average length is returned"""
     parsed_urls = TextParser.find_all_urls(row['text'])
     urls = row['urls']
-    urls_from_tweepy = ast.literal_eval(urls) if urls else []
+    if pd.isna(urls):
+        urls_from_tweepy = []
+    else:
+        urls_from_tweepy = ast.literal_eval(urls) if urls else []
 
     length_1 = len(parsed_urls) # this gives the number of urls
     length_2 = len(urls_from_tweepy)
