@@ -138,7 +138,7 @@ def normalize_chunk(df, avgs, stds, cols=None):
 
 
 def main():
-    testing = True
+    testing = False
     logging.basicConfig(level=logging.WARN)
 
     conn = get_conn(testing)
