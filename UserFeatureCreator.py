@@ -23,6 +23,9 @@ def create_user_features(user_df: pd.DataFrame, feature_df: Optional[pd.DataFram
         feature_df = pd.DataFrame()
 
     feature_df['id'] = user_df['id']
+    feature_df['user__listed_count'] = user_df['listed_count']
+    feature_df['user__followers_count'] = user_df['followers_count']
+    feature_df['user__friends_count'] = user_df['friends_count']
     # location
     feature_df['has_location'] = user_df['location'].apply(user__has_location)
 
@@ -122,11 +125,11 @@ def user__has_location(loc):
 def main():
     logging.basicConfig(filename='user_features.log', encoding='utf-8', level=logging.INFO, format='%(asctime)s - %(message)s')
     user_df = pd.read_csv('prepped.csv')
-    
+
     user_features = create_user_features(user_df)
-    user_features.to_parquet('user_features2.parquet.gzip', compression='gzip', index=False)
-    depth_df = pd.read_parquet('fifthf.parquet.gzip')
-    get_depth2_tweet_features(depth_df)
+    user_features.to_parquet('final_user_features.parquet.gzip', compression='gzip', index=False)
+    # depth_df = pd.read_parquet('fifthf.parquet.gzip')
+    # get_depth2_tweet_features(depth_df)
     
 
 

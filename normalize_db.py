@@ -78,14 +78,16 @@ def get_drop_cols(oh_columns, df_columns):
         keep_cols = pickle.load(fp)
     to_return.extend([col for col in df_columns if col not in keep_cols])
 
-    to_return.remove('id')
-    to_return.remove('author_id')
+    if 'id' in to_return:
+        to_return.remove('id')
+    if 'author_id' in to_return:
+        to_return.remove('author_id')
 
     return to_return
 
 
 def normalize_chunk(df, avgs, stds, cols=None):
-    pprint(df.columns.to_list())
+    # pprint(df.columns.to_list())
     with open('normalize.pickle', 'rb') as fp:
         normalize_columns = pickle.load(fp)
 
@@ -103,6 +105,7 @@ def normalize_chunk(df, avgs, stds, cols=None):
     oh_dfs = []
     for column in one_hot_columns:
         if column not in df.columns:
+            logging.warning(f'Skipping {column}')
             continue
         num_categories = len(df[column].unique()) + 1 if column != 'user__created_hour_of_day' else 24
         num_categories = 32 if column == 'tweet__day_of_month' else num_categories
@@ -110,8 +113,9 @@ def normalize_chunk(df, avgs, stds, cols=None):
         oh_matrix = convert_int_code(df[column].to_list(), num_categories)
         oh_dfs.append(make_one_hot_df(oh_matrix, column))
 
-    oh_columns = pd.concat(oh_dfs, axis=1)
-    df = pd.concat([df, oh_columns], axis=1)
+    if oh_dfs != []:
+        oh_columns = pd.concat(oh_dfs, axis=1)
+        df = pd.concat([df, oh_columns], axis=1)
 
     drop_cols = get_drop_cols(one_hot_columns, df.columns)
     df = df.drop(columns=drop_cols, errors='ignore')
@@ -144,24 +148,25 @@ def main():
     conn = get_conn(testing)
     conn.create_aggregate('STDDEV', 1, STDDEV)
 
-    if conn.execute("SELECT COUNT(*) FROM pragma_table_info('like_features') WHERE name='tweet__favorite_count'").fetchone()[0] == 0:
-        conn.execute("ALTER TABLE like_features RENAME like_count TO tweet__favorite_count")
-    if conn.execute("SELECT COUNT(*) FROM pragma_table_info('like_features') WHERE name='tweet__retweet_count'").fetchone()[0] == 0:
-        conn.execute("ALTER TABLE like_features RENAME retweet_count TO tweet__retweet_count")
-    if conn.execute("SELECT COUNT(*) FROM pragma_table_info('like_features') WHERE name='tweet__user_id'").fetchone()[0] == 0:
-        conn.execute("ALTER TABLE like_features ADD tweet__user_id")
-        conn.execute("UPDATE like_features SET tweet__user_id = author_id")
-        conn.commit()
+    # if conn.execute("SELECT COUNT(*) FROM pragma_table_info('like_features') WHERE name='tweet__favorite_count'").fetchone()[0] == 0:
+    #     conn.execute("ALTER TABLE like_features RENAME like_count TO tweet__favorite_count")
+    # if conn.execute("SELECT COUNT(*) FROM pragma_table_info('like_features') WHERE name='tweet__retweet_count'").fetchone()[0] == 0:
+    #     conn.execute("ALTER TABLE like_features RENAME retweet_count TO tweet__retweet_count")
+    # if conn.execute("SELECT COUNT(*) FROM pragma_table_info('like_features') WHERE name='tweet__user_id'").fetchone()[0] == 0:
+    #     conn.execute("ALTER TABLE like_features ADD tweet__user_id")
+    #     conn.execute("UPDATE like_features SET tweet__user_id = author_id")
+    #     conn.commit()
 
-    avgs, stds = build_global_norm_dict(conn, 'like_features')
+    # avgs, stds = build_global_norm_dict(conn, 'depth_features')
     if not testing:
-        with open('avg_std.pickle', 'wb') as fp:
-            to_write = (avgs, stds)
-            pickle.dump(to_write, fp)
+        with open('avg_std_user.pickle', 'rb') as fp:
+            avgs, stds = pickle.load(fp)
 
-    df = pd.read_sql('SELECT * FROM like_features', conn)
-    df = normalize_chunk(df, avgs, stds)
+    df = pd.read_sql('SELECT * FROM user_features', conn)
+    normalized_df = normalize_chunk(df, avgs, stds)
     print(df)
+    print(df.describe())
+    normalized_df.to_sql('normal_user_features', conn)
     conn.close()
 
 

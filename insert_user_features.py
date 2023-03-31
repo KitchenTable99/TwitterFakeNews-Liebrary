@@ -8,8 +8,8 @@ def get_conn(testing=True):
 
 def main():
     conn = get_conn(testing=False)
-    df = pd.read_parquet('./user_features.parquet.gzip')
-    df = df.rename(columns={col: f'user__{col}' for col in df.columns if col != 'id'})
+    df = pd.read_parquet('./final_user_features.parquet.gzip')
+    df = df.rename(columns={col: f'user__{col}' for col in df.columns if col != 'id' and not col.startswith('user__')})
 
     df.to_sql('user_features', conn, if_exists='append')
 
