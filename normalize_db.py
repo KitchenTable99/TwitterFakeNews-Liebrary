@@ -33,13 +33,15 @@ class STDDEV:
             inner = left - right
 
             return inner ** .5
-        except Exception as e:
-            print(e)
+        except KeyboardInterrupt as e:
             raise e
+        except Exception as e:
+            logging.critical(f'Suppressed error: {e}')
+            return -1
 
 
 def get_conn(testing=True):
-    return sqlite3.connect('./test_network_features.db') if testing else sqlite3.connect('./network_features.db')
+    return sqlite3.connect('./test_network_features.db') if testing else sqlite3.connect('./unzip.db')
 
 
 def build_global_norm_dict(conn, table_name, cols=None) -> Tuple[Dict[str, float], Dict[str, float]]:
@@ -55,10 +57,10 @@ def build_global_norm_dict(conn, table_name, cols=None) -> Tuple[Dict[str, float
         if col_present[0] == 0:  # the column is not present
             logging.warning(f'column not present: {col}')
             continue
-        avg = conn.execute(f"SELECT AVG({col}) from {table_name};").fetchone()[0]
+        avg = conn.execute(f"SELECT AVG(DISTINCT {col}) from {table_name};").fetchone()[0]
         avgs[col] = avg
 
-        std = conn.execute(f"SELECT STDDEV({col}) from {table_name};").fetchone()[0]
+        std = conn.execute(f"SELECT STDDEV(DISTINCT {col}) from {table_name};").fetchone()[0]
         stds[col] = std
 
     return (avgs, stds)
@@ -117,9 +119,10 @@ def normalize_chunk(df, avgs, stds, cols=None):
         oh_columns = pd.concat(oh_dfs, axis=1)
         df = pd.concat([df, oh_columns], axis=1)
 
+    df = df.rename(columns={'user__tweets_in_different_lang': 'user__nr_languages_tweeted',
+                            'possibly_sensitive': 'tweet__possibly_sensitive'})
     drop_cols = get_drop_cols(one_hot_columns, df.columns)
     df = df.drop(columns=drop_cols, errors='ignore')
-    df = df.rename(columns={'user__tweets_in_different_lang': 'user__nr_languages_tweeted'})
 
     # TODO: add inference once all columns are dropped and user columns are added
     # TODO: infer medias as well
@@ -146,7 +149,16 @@ def main():
     logging.basicConfig(level=logging.WARN)
 
     conn = get_conn(testing)
-    conn.create_aggregate('STDDEV', 1, STDDEV)
+    # conn.create_aggregate('STDDEV', 1, STDDEV)
+    #
+    # if conn.execute("SELECT COUNT(*) FROM pragma_table_info('like_features') WHERE name='tweet__favorite_count'").fetchone()[0] == 0:
+    #     conn.execute("ALTER TABLE like_features RENAME like_count TO tweet__favorite_count")
+    # if conn.execute("SELECT COUNT(*) FROM pragma_table_info('like_features') WHERE name='tweet__retweet_count'").fetchone()[0] == 0:
+    #     conn.execute("ALTER TABLE like_features RENAME retweet_count TO tweet__retweet_count")
+    # if conn.execute("SELECT COUNT(*) FROM pragma_table_info('like_features') WHERE name='tweet__user_id'").fetchone()[0] == 0:
+    #     conn.execute("ALTER TABLE like_features ADD tweet__user_id")
+    #     conn.execute("UPDATE like_features SET tweet__user_id = author_id")
+    #     conn.commit()
 
     # if conn.execute("SELECT COUNT(*) FROM pragma_table_info('like_features') WHERE name='tweet__favorite_count'").fetchone()[0] == 0:
     #     conn.execute("ALTER TABLE like_features RENAME like_count TO tweet__favorite_count")
